@@ -1,0 +1,39 @@
+#+TITLE: Fast and Accurate Image Matching on Massive Parallel Processors
+
+* Description
+
+This project provides a parallel implementation of CasHash algorithm.
+
+*Related Publication*
+
+Cheng Jian, Cong Leng, Jiaxiang Wu, Hainan Cui, and Hanqing Lu. "Fast and accurate image matching with cascade hashing for 3d reconstruction." In IEEE Conference on Computer Vision and Pattern Recognition (CVPR2014), pp. 1-8. 2014.
+
+* Installation
+
+* Usage
+
+#+BEGIN_SRC bash
+./KeyMatchCasHash <list.txt> <outfile>
+#+END_SRC
+
+* Todo
+
++ [ ] SIFT Vector Preprocessing
+  + [ ] Load vectors in all images. Or we can do a stream loading?
+  + [ ] Update all SIFT Vectors to become zero mean (Is this step omittable?)
+  + [ ] 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
++ [ ] Hash Calculation
+  + [ ] Load each SIFT vector into shared memory (48kB) and each thread does a mutiply operation. Then we do a parallel sum operation to calculate one bit of the hash vector. Then we do a loop to calculate all the bits.
+    + =__builtin_popcount(x)= counts the number of 1-bits in x
+    + For bucketing, we use 6x8 grids.
+    + For remapping into 128d Hamming space, we use 1x128 grids.
+  + [ ] Calculate which buckets each feature belongs to.
+  + Storage
+    + Bucket Information: 6 bucket group * 2000 vectors * 1000 images * 2 byte = ~24MiB
+    + Remapped vector: 2000 vectors * 1000 images * 16 byte = ~31MiB
+    + Which memory to use?
++ [ ] Matching
+  + [ ] Query all vectors according to bucket information stored in previous step
+  + [ ] Check multiple image pairs simultaneously
+
+    
