@@ -10,14 +10,34 @@ Cheng Jian, Cong Leng, Jiaxiang Wu, Hainan Cui, and Hanqing Lu. "Fast and accura
 
 * Installation
 
+On HHLR:
+
+#+BEGIN_EXAMPLE
+git clone git@github.com:cvcore/parallel_cashash.git cashash_cuda
+cd cashash_cuda
+mkdir build && cd build
+cmake ..
+make
+#+END_EXAMPLE
+
 * Usage
 
 - Input :: A list of path storing SIFT keyfeatures extracted from the images.
 - Output :: Match pairs.
 
+Sole command:
+
 #+BEGIN_EXAMPLE
 ./KeyMatchCUDA <list.txt> <outfile>
 #+END_EXAMPLE
+
+On HHLR:
+
+Extract keyfiles into cashash_cuda/test/keys, then in build folder, run:
+#+BEGIN_EXAMPLE
+sbatch job.sh
+#+END_EXAMPLE
+
 
 * Todo
 
