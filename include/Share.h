@@ -1,5 +1,11 @@
 #pragma once
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <cuda_runtime.h>
+
 const int kDimSiftData = 128; // the number of dimensions of SIFT feature
 const int kDimHashData = 128; // the number of dimensions of Hash code
 const int kBitInCompHash = 64; // the number of Hash code bits to be compressed; in this case, use a <uint64_t> variable to represent 64 bits
@@ -34,7 +40,7 @@ typedef struct {
 typedef struct {
     int cntPoint;
     SiftDataPtr siftArray;
-    int siftArrayPitch;
+    size_t siftArrayPitch;
     HashDataPtr* hashDataPtrList;
     CompHashDataPtr* compHashDataPtrList;
     uint16_t* bucketIDList[kCntBucketGroup];
@@ -42,5 +48,27 @@ typedef struct {
     BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup];
 } ImageDataDevice;
 
-typedef std::vector<std::pair<int, int> > MatchList; // SIFT point match list between two images
+#define CUDA_CHECK_ERROR                                                         \
+    do {                                                                         \
+        const cudaError_t err = cudaGetLastError();                              \
+        if (err != cudaSuccess) {                                                \
+            const char *const err_str = cudaGetErrorString(err);                 \
+            std::cerr << "Cuda error in " << __FILE__ << ":" << __LINE__ - 1     \
+                      << ": " << err_str << " (" << err << ")" << std::endl;     \
+            exit(EXIT_FAILURE);                                                  \
+        }                                                                        \
+    } while(0)
 
+template< typename T >
+void check(T result, char const *const func, const char *const file, int const line)
+{
+    if (result)
+    {
+        fprintf(stderr, "CUDA error at %s:%d code=%d(%s) \"%s\" \n",
+                file, line, static_cast<unsigned int>(result), cudaGetErrorString(result), func);
+        cudaDeviceReset();
+        // Make sure we call CUDA Device Reset before exiting
+        exit(EXIT_FAILURE);
+    }
+}
+#define CUDA_CATCH_ERROR(val) check ( (val), #val, __FILE__, __LINE__)

@@ -2,19 +2,20 @@
 
 #include <stdio.h>
 #include <cuda_runtime.h>
+#include <stdlib.h>
 
-void KeyFileReader::KeyFileReader() {
+KeyFileReader::KeyFileReader() {
     siftArray_ = NULL;
-    siftArrayPitch = 0;
+    siftArraySize_ = 0;
 }
 
-void KeyFileReader::~KeyFileReader() {
+KeyFileReader::~KeyFileReader() {
     free(siftArray_);
 }
 
 void KeyFileReader::TempArrayAdjust(size_t newSize) {
     fprintf(stderr, "Adjusting temporary host array to %ld bytes\n", newSize);
-    siftArray_ = realloc(siftArray_, newSize);
+    siftArray_ = (SiftDataPtr)realloc(siftArray_, newSize);
     if(!siftArray_) {
         fprintf(stderr, "Can't (re-)allocate host array!\n");
         exit(EXIT_FAILURE);
@@ -28,11 +29,11 @@ void KeyFileReader::Read(ImageDataDevice *imgDevice, const char *keyPath) {
         fprintf(stderr, "Key file %s does not exist!\n", keyPath);
         exit(EXIT_FAILURE);
     }
-
+    fprintf(stderr, "Reading SIFT vector from %s\n", keyPath);
     int cntPoint, cntDim;
     fscanf(fp, "%d%d", &cntPoint, &cntDim);
     if(cntDim != kDimSiftData) {
-        fprintf(stderr, "Unsupported SIFT vector dimension %d, should be %d!\n", cntDim);
+        fprintf(stderr, "Unsupported SIFT vector dimension %d, should be %d!\n", cntDim, kDimSiftData);
         exit(EXIT_FAILURE);
     }
     size_t requiredSize = cntPoint * cntDim * sizeof(int);
@@ -46,7 +47,8 @@ void KeyFileReader::Read(ImageDataDevice *imgDevice, const char *keyPath) {
             fscanf(fp, "%d", &rowVec[j]);
         }
     }
-    cudaMalloc2D(&(imgDevice->siftArray), &(imgDevice->siftArrayPitch), sizeof(int)* cntDim, cntPoint);
+    fclose(fp);
+    cudaMallocPitch(&(imgDevice->siftArray), &(imgDevice->siftArrayPitch), sizeof(int)* cntDim, cntPoint);
     cudaMemcpy2DAsync(imgDevice->siftArray, imgDevice->siftArrayPitch, siftArray_, sizeof(int) * cntDim, sizeof(int) * cntDim, cntPoint, cudaMemcpyHostToDevice); // TODO set stream
     CUDA_CHECK_ERROR;
 }

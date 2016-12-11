@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#SBATCH -J CasHash_CUDA
+#SBATCH -e @CMAKE_BINARY_DIR@/stderr.txt
+#SBATCH -o @CMAKE_BINARY_DIR@/stdout.txt
+#SBATCH -n 1
+#SBATCH --mem-per-cpu=1024
+#SBATCH -t 5
+#SBATCH --exclusive
+#SBATCH -p kurs2
+
+echo "This is Job $SLURM_JOB_ID"
+cd @CMAKE_BINARY_DIR@
+./KeyMatchCUDA list.txt output.txt
