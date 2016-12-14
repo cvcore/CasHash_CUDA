@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <cuda_runtime.h>
+#include <string>
 
 const int kDimSiftData = 128; // the number of dimensions of SIFT feature
 const int kDimHashData = 128; // the number of dimensions of Hash code
@@ -28,19 +29,22 @@ typedef int* BucketElePtr; // index list of points in a specific bucket
 
 typedef struct {
     int cntPoint; // the number of SIFT points
-    char keyFilePath[100]; // the path to SIFT feature file
-    SiftDataPtr* siftDataPtrList; // SIFT feature for each SIFT point
+    std::string keyFilePath;
+    SiftDataPtr siftDataMatrix; // [cntPoint x 128] Matrix, storing all sift vectors one-off
+
+    /* not currently used: */
     HashDataPtr* hashDataPtrList; // Hash code for each SIFT point
     CompHashDataPtr* compHashDataPtrList; // CompHash code for each SIFT point
     uint16_t* bucketIDList[kCntBucketGroup]; // bucket entries for each SIFT point
     int cntEleInBucket[kCntBucketGroup][kCntBucketPerGroup]; // the number of SIFT points in each bucket
     BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup]; // SIFT point index list for all buckets
-}   ImageData; // all information needed for an image to perform CasHash-Matching
+}   ImageDataHost; // all information needed for an image to perform CasHash-Matching
 
 typedef struct {
     int cntPoint;
-    SiftDataPtr siftArray;
-    size_t siftArrayPitch;
+    SiftDataPtr siftDataMatrix;
+    size_t siftDataMatrixPitch;
+
     HashDataPtr* hashDataPtrList;
     CompHashDataPtr* compHashDataPtrList;
     uint16_t* bucketIDList[kCntBucketGroup];

@@ -2,15 +2,21 @@
 
 #include <cuda_runtime.h>
 #include "Share.h"
+#include <vector>
 
 class KeyFileReader {
 public:
     KeyFileReader();
     ~KeyFileReader();
-    void Read(ImageDataDevice *imgD, const char *keyPath);
+    void UploadImage(ImageDataDevice &imgDev, const int index);
+    void AddKeyFile(const char *path);
+    void OpenKeyList(const char *path);
+    void ZeroMeanProc();
 
+    int cntImage;
+    
 private:
-    SiftDataPtr siftArray_;
-    size_t siftArraySize_;
-    void TempArrayAdjust(size_t newSize);
+    std::vector<ImageDataHost> h_imageList_;
+    float siftAccumulator_[kDimSiftData];
+    int cntTotalVector_;
 };

@@ -27,14 +27,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-cuda_add_executable(KeyMatchCUDA
-  src/main.cpp
+#cuda_add_executable(KeyMatchCUDA
+#  src/main.cpp
+#  src/KeyFileReader.cpp
+#  )
+
+cuda_add_executable(TestKeyFileReader
+  src/TestKeyFileReader.cpp
   src/KeyFileReader.cpp
   )
 
 # Activate (and require) C++11 support
-set_property(TARGET KeyMatchCUDA PROPERTY CXX_STANDARD 11)
-set_property(TARGET KeyMatchCUDA PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD 11)
+set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD_REQUIRED ON)
 
 # For HHLR
 configure_file(job.sh.in job.sh @ONLY)

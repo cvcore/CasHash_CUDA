@@ -45,7 +45,8 @@ sbatch job.sh
   - ✅ Load vectors in all images.
     - Stream loading with cuda stream and asynchronious functions.
     - Device supports concurrent kernel execution & has 2 async engines
-  - Update all SIFT Vectors to become zero mean (Is this step omitable?)
+  - Update all SIFT Vectors to become zero mean 
+    - Stream preprocessing
   - 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
 - Hash Calculation
   - Load each SIFT vector into shared memory (48kB) and each thread does a mutiply operation. Then we do a parallel sum operation to calculate one bit of the hash vector. Then we do a loop to calculate all the bits.
