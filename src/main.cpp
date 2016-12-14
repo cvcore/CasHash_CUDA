@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "KeyFileReader.h"
+#include "HashConverter.h"
 
 int main(int argc, char **argv) {
     char path1[256];
