@@ -35,6 +35,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 cuda_add_executable(TestKeyFileReader
   src/TestKeyFileReader.cpp
   src/KeyFileReader.cpp
+  src/HashConverter.cpp
   )
 
 # Activate (and require) C++11 support

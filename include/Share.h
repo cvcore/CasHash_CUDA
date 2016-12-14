@@ -52,6 +52,13 @@ typedef struct {
     BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup];
 } ImageDataDevice;
 
+typedef struct {
+	int width;
+	int height;
+	size_t pitch; // row size in bytes
+	int *elements;
+} Matrix;
+
 #define CUDA_CHECK_ERROR                                                         \
     do {                                                                         \
         const cudaError_t err = cudaGetLastError();                              \
