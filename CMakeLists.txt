@@ -36,6 +36,7 @@ cuda_add_executable(TestKeyFileReader
   src/TestKeyFileReader.cpp
   src/KeyFileReader.cpp
   src/HashConverter.cpp
+  src/hashConverterKernel.cu
   )
 
 # Activate (and require) C++11 support
