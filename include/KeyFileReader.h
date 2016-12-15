@@ -17,6 +17,6 @@ public:
     
 private:
     std::vector<ImageDataHost> h_imageList_;
-    float siftAccumulator_[kDimSiftData];
+    SiftData_t siftAccumulator_[kDimSiftData];
     int cntTotalVector_;
 };

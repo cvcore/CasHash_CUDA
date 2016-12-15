@@ -21,8 +21,8 @@ const int kCntBucketPerGroup = 1 << kCntBucketBit; // the number of buckets in e
 const int kCntCandidateTopMin = 6; // the minimal number of top-ranked candidates
 const int kCntCandidateTopMax = 10; // the maximal number of top-ranked candidates
 
-typedef int SiftData_t;
-typedef int* SiftDataPtr; // SIFT feature is represented with <int> type
+typedef float SiftData_t; // CUDA GPUs are optimized for float arithmetics, we use float instead of int
+typedef float* SiftDataPtr;
 typedef uint8_t* HashDataPtr; // Hash code is represented with <uint8_t> type; only the lowest bit is used
 typedef uint64_t* CompHashDataPtr; // CompHash code is represented with <uint64_t> type
 typedef int* BucketElePtr; // index list of points in a specific bucket
@@ -56,7 +56,7 @@ typedef struct {
 	int width;
 	int height;
 	size_t pitch; // row size in bytes
-	int *elements;
+	SiftDataPtr elements;
 } Matrix;
 
 #define CUDA_CHECK_ERROR                                                         \

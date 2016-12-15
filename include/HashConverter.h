@@ -8,9 +8,9 @@ public:
     HashConverter();
     ~HashConverter();
     void SiftDataToHashData(ImageDataDevice *imgD);
+    void FillHashingMatrix();
 
 private:
-	Matrix d_projMatHamming; // projection matrix of the primary hashing function
-   // 	Matrix* d_projMatBucket[kCntBucketGroup][kCntBucketBit][kDimSiftData]; // projection matrix of the secondary hashing function
-   //	Matrix d_bucketBitList[kCntBucketGroup][kCntBucketBit]; // selected bits in the result of primary hashing fuction for bucket construction
+    Matrix d_projMatHamming_; // Matrix for 128-bit hamming vector, width = kDimSiftData
+    Matrix d_projMatBucket_[kCntBucketGroup]; // Matrix for bucket making, width = kDimSiftData
 };

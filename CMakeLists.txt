@@ -16,6 +16,10 @@ if( NOT cmake_build_type_tolower STREQUAL "debug"
   message(FATAL_ERROR "Unknown build type \"${CMAKE_BUILD_TYPE}\". Allowed values are Debug, Release, RelWithDebInfo (case-insensitive).")
 endif()
 
+if(cmake_build_type_tolower STREQUAL "debug")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long")
+endif()
+
 find_package(CUDA REQUIRED)
 
 # Kepler
@@ -35,9 +39,18 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 cuda_add_executable(TestKeyFileReader
   src/TestKeyFileReader.cpp
   src/KeyFileReader.cpp
-  src/HashConverter.cpp
-  src/hashConverterKernel.cu
   )
+
+cuda_add_executable(TestHashConverter
+  src/TestHashConverter.cpp
+  src/KeyFileReader.cpp
+  src/HashConverter.cpp
+  src/HashConverter.cu
+  )
+
+target_link_libraries(
+  TestHashConverter
+  curand)
 
 # Activate (and require) C++11 support
 set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD 11)

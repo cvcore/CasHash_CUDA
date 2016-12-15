@@ -39,7 +39,7 @@ void KeyFileReader::AddKeyFile( const char *path ) {
     for(int i = 0; i < cntPoint; i++) {
         SiftDataPtr rowVector = newImage.siftDataMatrix + kDimSiftData * i;
         for(int j = 0; j < kDimSiftData; j++) {
-            fscanf(keyFile, "%d", &rowVector[j]);
+            fscanf(keyFile, "%f", &rowVector[j]);
             siftAccumulator_[j] = siftAccumulator_[j] + static_cast<float>(rowVector[j]);
             cntTotalVector_++;
         }
@@ -64,9 +64,9 @@ void KeyFileReader::OpenKeyList( const char *path ) {
 
 void KeyFileReader::ZeroMeanProc() {
     std::vector<ImageDataHost>::iterator it;
-    int mean[kDimSiftData];
+    SiftData_t mean[kDimSiftData] = {0};
     for(int i = 0; i < kDimSiftData; i++) {
-        mean[i] = static_cast<int>(siftAccumulator_[i] / cntTotalVector_);
+        mean[i] = siftAccumulator_[i] / cntTotalVector_;
     }
     for(it = h_imageList_.begin(); it != h_imageList_.end(); ++it) {
         for(int i = 0; i < it->cntPoint; i++) {
