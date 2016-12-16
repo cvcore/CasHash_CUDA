@@ -28,36 +28,28 @@ typedef uint64_t* CompHashDataPtr; // CompHash code is represented with <uint64_
 typedef int* BucketElePtr; // index list of points in a specific bucket
 
 typedef struct {
+    int width;
+    int height;
+    size_t pitch; // row size in bytes
+    SiftDataPtr elements;
+} Matrix;
+
+typedef struct {
     int cntPoint; // the number of SIFT points
     std::string keyFilePath;
-    SiftDataPtr siftDataMatrix; // [cntPoint x 128] Matrix, storing all sift vectors one-off
-
-    /* not currently used: */
-    HashDataPtr* hashDataPtrList; // Hash code for each SIFT point
-    CompHashDataPtr* compHashDataPtrList; // CompHash code for each SIFT point
-    uint16_t* bucketIDList[kCntBucketGroup]; // bucket entries for each SIFT point
-    int cntEleInBucket[kCntBucketGroup][kCntBucketPerGroup]; // the number of SIFT points in each bucket
-    BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup]; // SIFT point index list for all buckets
+    Matrix siftData; // [cntPoint x 128] Matrix, storing all sift vectors one-off
 }   ImageDataHost; // all information needed for an image to perform CasHash-Matching
 
 typedef struct {
     int cntPoint;
-    SiftDataPtr siftDataMatrix;
-    size_t siftDataMatrixPitch;
+    Matrix siftData;
+    Matrix compHashData;
 
-    HashDataPtr* hashDataPtrList;
-    CompHashDataPtr* compHashDataPtrList;
+    /* not currently used: */
     uint16_t* bucketIDList[kCntBucketGroup];
     int cntEleInBucket[kCntBucketGroup][kCntBucketPerGroup];
     BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup];
 } ImageDataDevice;
-
-typedef struct {
-	int width;
-	int height;
-	size_t pitch; // row size in bytes
-	SiftDataPtr elements;
-} Matrix;
 
 #define CUDA_CHECK_ERROR                                                         \
     do {                                                                         \

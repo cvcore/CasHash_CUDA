@@ -10,7 +10,7 @@ KeyFileReader::KeyFileReader() {
 KeyFileReader::~KeyFileReader() {
     std::vector<ImageDataHost>::iterator it;
     for(it = h_imageList_.begin(); it != h_imageList_.end(); ++it) {
-        delete[] it->siftDataMatrix;
+        delete[] it->siftData.elements;
     }
 }
 
@@ -27,17 +27,23 @@ void KeyFileReader::AddKeyFile( const char *path ) {
         fprintf(stderr, "Unsupported SIFT vector dimension %d, should be %d!\n", cntDim, kDimSiftData);
         exit(EXIT_FAILURE);
     }
+
     ImageDataHost newImage;
     newImage.cntPoint = cntPoint;
     newImage.keyFilePath = path;
+
     size_t requiredSize = cntPoint * cntDim;
-    newImage.siftDataMatrix = new SiftData_t[requiredSize];
-    if( newImage.siftDataMatrix == NULL) {
+    newImage.siftData.elements = new SiftData_t[requiredSize];
+    newImage.siftData.width = cntDim;
+    newImage.siftData.height = cntPoint;
+    newImage.siftData.pitch = cntDim * sizeof(SiftData_t);
+    if( newImage.siftData.elements == NULL) {
         fprintf(stderr, "Can't allocate memory for host image!\n");
         exit(EXIT_FAILURE);
     }
+
     for(int i = 0; i < cntPoint; i++) {
-        SiftDataPtr rowVector = newImage.siftDataMatrix + kDimSiftData * i;
+        SiftDataPtr rowVector = newImage.siftData.elements + kDimSiftData * i;
         for(int j = 0; j < kDimSiftData; j++) {
             fscanf(keyFile, "%f", &rowVector[j]);
             siftAccumulator_[j] = siftAccumulator_[j] + static_cast<float>(rowVector[j]);
@@ -64,13 +70,13 @@ void KeyFileReader::OpenKeyList( const char *path ) {
 
 void KeyFileReader::ZeroMeanProc() {
     std::vector<ImageDataHost>::iterator it;
-    SiftData_t mean[kDimSiftData] = {0};
+    SiftData_t mean[kDimSiftData];
     for(int i = 0; i < kDimSiftData; i++) {
         mean[i] = siftAccumulator_[i] / cntTotalVector_;
     }
     for(it = h_imageList_.begin(); it != h_imageList_.end(); ++it) {
         for(int i = 0; i < it->cntPoint; i++) {
-            SiftDataPtr rowVector = it->siftDataMatrix + i * kDimSiftData;
+            SiftDataPtr rowVector = it->siftData.elements + i * kDimSiftData;
             for(int j = 0; j < kDimSiftData; j++) {
                 rowVector[j] -= mean[j];
             }
@@ -78,13 +84,20 @@ void KeyFileReader::ZeroMeanProc() {
     }
 }
 
-void KeyFileReader::UploadImage( ImageDataDevice &imgDev, const int index ) {
-    SiftDataPtr& d_siftMat = imgDev.siftDataMatrix;
-    size_t& pitch = imgDev.siftDataMatrixPitch;
-    SiftDataPtr h_siftMat = h_imageList_[index].siftDataMatrix;
-    size_t height = h_imageList_[index].cntPoint;
+void KeyFileReader::UploadImage( ImageDataDevice &d_Image, const int index ) {
+    d_Image.siftData.width = kDimSiftData;
+    d_Image.siftData.height = h_imageList_[index].cntPoint;
 
-    cudaMallocPitch(&d_siftMat, &pitch, kDimSiftData * sizeof(SiftData_t), height);
-    cudaMemcpy2D(d_siftMat, pitch, h_siftMat, sizeof(SiftData_t) * kDimSiftData, sizeof(SiftData_t) * kDimSiftData, height, cudaMemcpyHostToDevice);
+    cudaMallocPitch(&(d_Image.siftData.elements),
+                    &(d_Image.siftData.pitch),
+                    d_Image.siftData.width * sizeof(SiftData_t),
+                    d_Image.siftData.height);
+
+    cudaMemcpy2D(d_Image.siftData.elements,
+                 d_Image.siftData.pitch,
+                 h_imageList_[index].siftData.elements,
+                 h_imageList_[index].siftData.pitch,
+                 h_imageList_[index].siftData.width * sizeof(SiftData_t),
+                 h_imageList_[index].siftData.height, cudaMemcpyHostToDevice);
     CUDA_CHECK_ERROR;
 }
