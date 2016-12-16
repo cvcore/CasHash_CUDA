@@ -7,10 +7,11 @@ class HashConverter {
 public:
     HashConverter();
     ~HashConverter();
-    void SiftDataToHashData(ImageDataDevice *imgD);
     void FillHashingMatrix();
+    void CompHash(ImageDevice &d_Image);
+    void BucketHash(ImageDevice &d_Image);
 
 private:
-    Matrix d_projMatHamming_; // Matrix for 128-bit hamming vector, width = kDimSiftData
-    Matrix d_projMatBucket_[kCntBucketGroup]; // Matrix for bucket making, width = kDimSiftData
+    Matrix<SiftData_t> d_projMatHamming_; // Matrix for 128-bit hamming vector, width = kDimSiftData
+    Matrix<SiftData_t> d_projMatBucket_[kCntBucketGroup]; // Matrix for bucket making, width = kDimSiftData
 };

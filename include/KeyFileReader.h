@@ -8,7 +8,7 @@ class KeyFileReader {
 public:
     KeyFileReader();
     ~KeyFileReader();
-    void UploadImage(ImageDataDevice &imgDev, const int index);
+    void UploadImage(ImageDevice &imgDev, const int index);
     void AddKeyFile(const char *path);
     void OpenKeyList(const char *path);
     void ZeroMeanProc();
@@ -16,7 +16,7 @@ public:
     int cntImage;
     
 private:
-    std::vector<ImageDataHost> h_imageList_;
+    std::vector<ImageHost> h_imageList_;
     SiftData_t siftAccumulator_[kDimSiftData];
     int cntTotalVector_;
 };

@@ -10,8 +10,8 @@ HashConverter::HashConverter(){
 	//Allocate matrix for hashing into 128d-Hamming space
 	d_projMatHamming_.width = kDimSiftData;
 	d_projMatHamming_.height = kDimHashData;
-	cudaMallocPitch((void**) &d_projMatHamming_.elements,
-                  &d_projMatHamming_.pitch,
+	cudaMallocPitch(&(d_projMatHamming_.elements),
+                  &(d_projMatHamming_.pitch),
                   d_projMatHamming_.width * sizeof(SiftData_t),
                   d_projMatHamming_.height);
   CUDA_CHECK_ERROR;
@@ -45,10 +45,6 @@ HashConverter::~HashConverter(){
     CUDA_CHECK_ERROR;
 }
 
-void HashConverter::SiftDataToHashData(ImageDataDevice *imgD){
-
-}
-
 void HashConverter::FillHashingMatrix() {
     curandGenerator_t gen;
 
@@ -71,3 +67,4 @@ void HashConverter::FillHashingMatrix() {
 
     CUDA_CHECK_ERROR;
 }
+

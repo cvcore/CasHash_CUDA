@@ -8,7 +8,7 @@ KeyFileReader::KeyFileReader() {
 }
 
 KeyFileReader::~KeyFileReader() {
-    std::vector<ImageDataHost>::iterator it;
+    std::vector<ImageHost>::iterator it;
     for(it = h_imageList_.begin(); it != h_imageList_.end(); ++it) {
         delete[] it->siftData.elements;
     }
@@ -28,7 +28,7 @@ void KeyFileReader::AddKeyFile( const char *path ) {
         exit(EXIT_FAILURE);
     }
 
-    ImageDataHost newImage;
+    ImageHost newImage;
     newImage.cntPoint = cntPoint;
     newImage.keyFilePath = path;
 
@@ -69,7 +69,7 @@ void KeyFileReader::OpenKeyList( const char *path ) {
 }
 
 void KeyFileReader::ZeroMeanProc() {
-    std::vector<ImageDataHost>::iterator it;
+    std::vector<ImageHost>::iterator it;
     SiftData_t mean[kDimSiftData];
     for(int i = 0; i < kDimSiftData; i++) {
         mean[i] = siftAccumulator_[i] / cntTotalVector_;
@@ -84,7 +84,8 @@ void KeyFileReader::ZeroMeanProc() {
     }
 }
 
-void KeyFileReader::UploadImage( ImageDataDevice &d_Image, const int index ) {
+void KeyFileReader::UploadImage( ImageDevice &d_Image, const int index ) {
+    d_Image.cntPoint = h_imageList_[index].cntPoint;
     d_Image.siftData.width = kDimSiftData;
     d_Image.siftData.height = h_imageList_[index].cntPoint;
 
