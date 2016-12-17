@@ -1,16 +1,9 @@
 #include "HashConverter.h"
 #include "Share.h"
-#include <iostream>
-
-// blockIdx.y: bit
-// threadIdx.x + blockIdx.x * BLOCK_SIZE = Nr. sift vec
-
-// threadIdx.x: final bit.
-// blockIdx.x: Nr. sift vec
 
 __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_t> g_projMat, Matrix<CompHashData_t> g_compHash) {
     __shared__  float s_siftCur[kDimSiftData]; // shared sift vector
-    __shared__ uint32_t s_hashBits[kBitInCompHash];
+    __shared__ uint32_t s_hashBits[kDimHashData];
     SiftDataPtr g_siftCur = &g_sift(blockIdx.x, 0);
     SiftDataConstPtr g_projMatCur = &g_projMat(threadIdx.x, 0);
     int tx = threadIdx.x;
@@ -23,8 +16,9 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
     for(int i = 0; i < kDimSiftData; i++) {
         element = element + s_siftCur[i] * g_projMatCur[i];
     }
-    uint32_t elementBit = static_cast<int>(element > 0.f);
+    uint32_t elementBit = static_cast<uint32_t>(element > 0.f);
     elementBit <<= tx % 32;
+    s_hashBits[tx] = elementBit;
     __syncthreads();
 
     for(int stride = 2; stride <= 32; stride <<= 1) {

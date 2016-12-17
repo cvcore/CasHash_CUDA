@@ -24,5 +24,6 @@ int main(int argc, char *argv[]) {
     cudaFree(d_Img.siftData.elements);
     CUDA_CHECK_ERROR;
 
+
     return 0;
 }

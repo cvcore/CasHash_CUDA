@@ -41,23 +41,23 @@ sbatch job.sh
 
 * Todo
 
-- SIFT Vector Preprocessing
+- ✅ SIFT Vector Preprocessing & CPU Storage
   - ✅ Load vectors in all images.
     - Stream loading with cuda stream and asynchronious functions.
     - Device supports concurrent kernel execution & has 2 async engines
-  - Update all SIFT Vectors to become zero mean 
+  - ✅ Update all SIFT Vectors to become zero mean 
     - Stream preprocessing
-  - 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
+    - 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
 - Hash Calculation
-  - Load each SIFT vector into shared memory (48kB) and each thread does a mutiply operation. Then we do a parallel sum operation to calculate one bit of the hash vector. Then we do a loop to calculate all the bits.
-    - Use =__device__ int __popcll(unsigned long long int x)= for sorting mapped hash values
-    - For bucketing, we use 6x8 grids.
+  - ✅ Hash Remapping
     - For remapping into 128d Hamming space, we use 1x128 grids.
-  - Calculate which buckets each feature belongs to.
-  - Storage
+  - Bucket Generating
+    - For bucketing, we use 6x8 grids.
+  - Bucket Storage
     - Bucket Information: 6 bucket group * 2000 vectors * 1000 images * 2 byte = ~24MiB
     - Remapped vector: 2000 vectors * 1000 images * 16 byte = ~31MiB
     - Which memory to use?
 - Matching
+  - Use =__device__ int __popcll(unsigned long long int x)= for sorting mapped hash values
   - Query all vectors according to bucket information stored in previous step
   - Check multiple image pairs simultaneously
