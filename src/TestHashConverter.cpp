@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     HashConverter hc;
     hc.CompHash(d_Img);
     CUDA_CHECK_ERROR;
-    CUDA_CHECK_ERROR;
+    hc.BucketHash(d_Img);
     std::cout << d_Img.siftData.elements << std::endl;
     cudaFree(d_Img.compHashData.elements);
     CUDA_CHECK_ERROR;

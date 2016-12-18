@@ -34,7 +34,8 @@ typedef uint8_t HashData_t;
 typedef uint8_t* HashDataPtr; // Hash code is represented with <uint8_t> type; only the lowest bit is used
 typedef uint64_t CompHashData_t;
 typedef uint64_t* CompHashDataPtr; // CompHash code is represented with <uint64_t> type
-typedef int* BucketElePtr; // index list of points in a specific bucket
+typedef uint16_t BucketEle_t;
+typedef uint16_t* BucketElePtr; // index list of points in a specific bucket
 
 template <typename T>
 struct Matrix {
@@ -70,12 +71,8 @@ struct ImageDevice {
     int cntPoint;
     Matrix<SiftData_t> siftData;
     Matrix<CompHashData_t> compHashData; // [cntPoint x 2 Matrix]
-
-    /* not currently used: */
-    uint16_t* bucketIDList[kCntBucketGroup];
-    int cntEleInBucket[kCntBucketGroup][kCntBucketPerGroup];
-    BucketElePtr bucketList[kCntBucketGroup][kCntBucketPerGroup];
-
+    Matrix<HashData_t> bucketIDList; // element -> buckets [cntPoint x kCntBucketGroup]
+    Matrix<BucketEle_t> bucketList; // bucket -> elements [kCntBucketPerGroup x TODO]
 };
 
 #define CUDA_CHECK_ERROR                                                         \

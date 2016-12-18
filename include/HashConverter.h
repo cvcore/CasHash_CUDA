@@ -13,5 +13,5 @@ public:
 
 private:
     Matrix<SiftData_t> d_projMatHamming_; // Matrix for 128-bit hamming vector, width = kDimSiftData
-    Matrix<SiftData_t> d_projMatBucket_[kCntBucketGroup]; // Matrix for bucket making, width = kDimSiftData
+    Matrix<SiftData_t> d_projMatBucket_; // Same structure as d_projMatHamming but we chose to use only 6*8 = 48 bit from it.
 };
