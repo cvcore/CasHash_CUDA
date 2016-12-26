@@ -62,8 +62,8 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
     __shared__ uint8_t s_hashBits[kDimHashData];
     SiftDataPtr g_siftCur = &g_sift(blockIdx.x, 0);
     SiftDataConstPtr g_projMatCur = &g_projMat(threadIdx.x, 0);
-    int tx = threadIdx.x;
-    int bx = blockIdx.x;
+    int tx = threadIdx.x; // hash group
+    int bx = blockIdx.x; // sift vector index
 
     s_siftCur[tx] = g_siftCur[tx]; // we can do this because kDimSiftData == kBitInCompHash, otherwise we need to setup a if condition
     __syncthreads();
@@ -84,10 +84,19 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         __syncthreads();
     }
 
-    if(tx % 8 == 0 && tx < kCntBucketGroup) {
+    if(tx % 8 == 0 && tx / 8 < kCntBucketGroup) {
         hashVal = s_hashBits[tx];
         g_bucketHash(bx, tx / 8) = hashVal;
-        // TODO: critical section g_bucketEle(hashVal, cnt++) = bx;
+        BucketElePtr baseAddr = &(g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, 0));
+        int currIdx = atomicInc(baseAddr, kMaxMemeberPerGroup) + 1;
+
+        printf("%d %d %d\n", tx / 8, hashVal, currIdx); // debug
+
+        if(currIdx == 1) {
+            printf("Warning: bucket member overflow! Consider increasing bucket size #%d %d!\n", tx / 8, hashVal);
+        }
+
+        g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, currIdx) = bx;
     }
 }
 
@@ -98,6 +107,22 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
                     &(d_Image.bucketIDList.pitch),
                     d_Image.bucketIDList.width * sizeof(HashData_t),
                     d_Image.bucketIDList.height);
+
+    d_Image.bucketList.width = kMaxMemeberPerGroup;
+    d_Image.bucketList.height = kCntBucketGroup * kCntBucketPerGroup;
+    cudaMallocPitch(&(d_Image.bucketList.elements),
+                    &(d_Image.bucketList.pitch),
+                    d_Image.bucketList.width * sizeof(BucketEle_t),
+                    d_Image.bucketList.height);
+
+
+    for(int i = 0; i < d_Image.bucketList.height; i++) {
+        cudaMemset(&(d_Image.bucketList(i, 0)),
+                   0,
+                   sizeof(BucketEle_t));
+        CUDA_CHECK_ERROR;
+    }
+
     CUDA_CHECK_ERROR;
 
     // TODO bucketEle

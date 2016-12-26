@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <cuda.h>
 #include <curand.h>
+#include <iostream>
 
 HashConverter::HashConverter(){
 	//Allocate matrix for hashing into 128d-Hamming space

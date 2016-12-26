@@ -23,6 +23,7 @@ const int kMaxCntPoint = 1000000; // the maximal number of possible SIFT points;
 const int kCntBucketBit = 8; // the number of bucket bits
 const int kCntBucketGroup = 6; // the number of bucket groups
 const int kCntBucketPerGroup = 1 << kCntBucketBit; // the number of buckets in each group
+const int kMaxMemeberPerGroup = 2000;
 
 const int kCntCandidateTopMin = 6; // the minimal number of top-ranked candidates
 const int kCntCandidateTopMax = 10; // the maximal number of top-ranked candidates
@@ -34,8 +35,8 @@ typedef uint8_t HashData_t;
 typedef uint8_t* HashDataPtr; // Hash code is represented with <uint8_t> type; only the lowest bit is used
 typedef uint64_t CompHashData_t;
 typedef uint64_t* CompHashDataPtr; // CompHash code is represented with <uint64_t> type
-typedef uint16_t BucketEle_t;
-typedef uint16_t* BucketElePtr; // index list of points in a specific bucket
+typedef unsigned int BucketEle_t;
+typedef unsigned int* BucketElePtr; // index list of points in a specific bucket
 
 template <typename T>
 struct Matrix {
@@ -74,6 +75,8 @@ struct ImageDevice {
     Matrix<HashData_t> bucketIDList; // element -> buckets [cntPoint x kCntBucketGroup]
     Matrix<BucketEle_t> bucketList; // bucket -> elements [kCntBucketPerGroup x TODO]
 };
+
+
 
 #define CUDA_CHECK_ERROR                                                         \
     do {                                                                         \
