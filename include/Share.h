@@ -23,7 +23,7 @@ const int kMaxCntPoint = 1000000; // the maximal number of possible SIFT points;
 const int kCntBucketBit = 8; // the number of bucket bits
 const int kCntBucketGroup = 6; // the number of bucket groups
 const int kCntBucketPerGroup = 1 << kCntBucketBit; // the number of buckets in each group
-const int kMaxMemeberPerGroup = 2000;
+const int kMaxMemberPerGroup = 2000;
 
 const int kCntCandidateTopMin = 6; // the minimal number of top-ranked candidates
 const int kCntCandidateTopMax = 10; // the maximal number of top-ranked candidates
@@ -73,7 +73,7 @@ struct ImageDevice {
     Matrix<SiftData_t> siftData;
     Matrix<CompHashData_t> compHashData; // [cntPoint x 2 Matrix]
     Matrix<HashData_t> bucketIDList; // element -> buckets [cntPoint x kCntBucketGroup]
-    Matrix<BucketEle_t> bucketList; // bucket -> elements [kCntBucketPerGroup x TODO]
+    Matrix<BucketEle_t> bucketList; // bucket -> elements [kCntBucketGroup*kCntBucketPerGroup x kMaxMemberPerGroup]
 };
 
 

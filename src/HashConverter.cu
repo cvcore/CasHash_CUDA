@@ -108,7 +108,7 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
                     d_Image.bucketIDList.width * sizeof(HashData_t),
                     d_Image.bucketIDList.height);
 
-    d_Image.bucketList.width = kMaxMemeberPerGroup;
+    d_Image.bucketList.width = kMaxMemberPerGroup;
     d_Image.bucketList.height = kCntBucketGroup * kCntBucketPerGroup;
     cudaMallocPitch(&(d_Image.bucketList.elements),
                     &(d_Image.bucketList.pitch),
