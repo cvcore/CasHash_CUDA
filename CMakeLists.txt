@@ -48,8 +48,20 @@ cuda_add_executable(TestHashConverter
   src/HashConverter.cu
   )
 
+cuda_add_executable(TestCasHashMatcher
+  src/TestCasHashMatcher.cpp
+  src/KeyFileReader.cpp
+  src/HashConverter.cpp
+  src/HashConverter.cu
+  src/CasHashMatcher.cpp
+  )
+
 target_link_libraries(
   TestHashConverter
+  curand)
+
+target_link_libraries(
+  TestCasHashMatcher
   curand)
 
 # Activate (and require) C++11 support

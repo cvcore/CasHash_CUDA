@@ -11,4 +11,4 @@
 
 echo "This is Job $SLURM_JOB_ID"
 cd @CMAKE_BINARY_DIR@
-./KeyMatchCUDA list.txt output.txt
+./TestCasHashMatcher ../test/keys/list.txt output.txt

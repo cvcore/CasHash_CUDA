@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < kf.cntImage; i++){
 	ImageDevice curImg;
 	std::cout << "uploading image " << i << "\n";
-	kf.Upload(curImg, i);
+	kf.UploadImage(curImg, i);
 	hc.CalcHashValues(curImg);
     }
 
