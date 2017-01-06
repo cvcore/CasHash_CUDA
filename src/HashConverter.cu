@@ -88,7 +88,7 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         hashVal = s_hashBits[tx];
         g_bucketHash(bx, tx / 8) = hashVal;
         BucketElePtr baseAddr = &(g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, 0));
-        int currIdx = atomicInc(baseAddr, kMaxMemeberPerGroup) + 1;
+        int currIdx = atomicInc(baseAddr, kMaxMemberPerGroup) + 1;
 
         printf("%d %d %d\n", tx / 8, hashVal, currIdx); // debug
 
