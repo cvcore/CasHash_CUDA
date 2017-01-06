@@ -84,3 +84,9 @@ void HashConverter::FillHashingMatrix() {
     CUDA_CHECK_ERROR;
 }
 
+void HashConverter::CalcHashValues(ImageDevice &d_Image){
+	CompHash(d_Img);
+	BucketHash(d_Img);
+	cudaFree(d_Img.siftData.elements);
+}
+
