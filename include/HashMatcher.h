@@ -3,7 +3,7 @@
 #include <cuda_runtime.h>
 #include "Share.h"
 
-class CasHashMatcher {
+class HashMatcher {
 public:
     CasHashMatcher();
     ~CasHashMatcher();

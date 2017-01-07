@@ -1,4 +1,4 @@
-#include "CasHashMatcher.h"
+#include "HashMatcher.h"
 
 #include <stdio.h>
 #include <cuda_runtime.h>
@@ -6,11 +6,11 @@
 #include <cuda.h>
 #include <iostream>
 
-CasHashMatcher::CasHashMatcher(){
+HashMatcher::HashMatcher() {
 
 }
 
-CasHashMatcher::~CasHashMatcher(){ 
+HashMatcher::~HashMatcher() { 
 
 }
 
