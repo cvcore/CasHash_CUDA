@@ -59,7 +59,7 @@ void HashConverter::FillHashingMatrix() {
     curandGenerator_t gen;
 
     curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
-    //cudaSetRandomGeneratorSeed(gen, 1); // TODO fillin arbitrary number
+    cudaSetRandomGeneratorSeed(gen, 1); // TODO fillin arbitrary number
 
     SiftDataPtr base = d_projMatHamming_.elements;
     for(int i = 0; i < d_projMatHamming_.height; i++) {
@@ -67,6 +67,7 @@ void HashConverter::FillHashingMatrix() {
         base = base + d_projMatHamming_.pitch;
     }
 
+    dumpDeviceArray(d_projMatHamming_.elements, kDimSiftData);
     //for(int i = 0; i < kCntBucketGroup; i++) {
     //    base = d_projMatBucket_[i].elements;
     //    for(int j = 0; j < d_projMatBucket_[i].height; j++) {

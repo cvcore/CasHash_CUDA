@@ -102,3 +102,15 @@ void check(T result, char const *const func, const char *const file, int const l
     }
 }
 #define CUDA_CATCH_ERROR(val) check ( (val), #val, __FILE__, __LINE__)
+
+void dumpDeviceArray(const float *d_Array, int count) {
+    float *h_Array = new float[count];
+    cudaMemcpy(h_Array, d_Array, count * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK_ERROR;
+    std::cout << "Dumping device array:\n";
+    for(int i = 0; i < count; i++) {
+        std::cout << h_Array << ' ';
+    }
+    std::cout << "[ " << count << " element(s) ]\n";
+    delete [] h_Array;
+}
