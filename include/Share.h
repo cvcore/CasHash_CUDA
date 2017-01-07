@@ -103,14 +103,24 @@ void check(T result, char const *const func, const char *const file, int const l
 }
 #define CUDA_CATCH_ERROR(val) check ( (val), #val, __FILE__, __LINE__)
 
-void dumpDeviceArray(const float *d_Array, int count) {
-    float *h_Array = new float[count];
-    cudaMemcpy(h_Array, d_Array, count * sizeof(float), cudaMemcpyDeviceToHost);
+template <typename T>
+inline void dumpDeviceArray(T const *d_Array, int count) {
+    T *h_Array = new T[count];
+    cudaMemcpy(h_Array, d_Array, count * sizeof(T), cudaMemcpyDeviceToHost);
     CUDA_CHECK_ERROR;
     std::cout << "Dumping device array:\n";
     for(int i = 0; i < count; i++) {
-        std::cout << h_Array << ' ';
+        std::cout << h_Array[i] << ", ";
     }
     std::cout << "[ " << count << " element(s) ]\n";
     delete [] h_Array;
+}
+
+template <typename T>
+inline void dumpHostArray(T const *h_Array, int count) {
+    std::cout << "Dumping host array:\n";
+    for(int i = 0; i < count; i++) {
+        std::cout << h_Array[i] << ", ";
+    }
+    std::cout << "[ " << count << " element(s) ]\n";
 }

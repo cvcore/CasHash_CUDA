@@ -18,6 +18,7 @@ endif()
 
 if(cmake_build_type_tolower STREQUAL "debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long")
+  add_definitions(-DDEBUG)
 endif()
 
 find_package(CUDA REQUIRED)
@@ -48,6 +49,10 @@ cuda_add_executable(TestHashConverter
   src/HashConverter.cu
   )
 
+target_link_libraries(
+  TestHashConverter
+  curand)
+
 cuda_add_executable(TestCasHashMatcher
   src/TestCasHashMatcher.cpp
   src/KeyFileReader.cpp
@@ -57,12 +62,10 @@ cuda_add_executable(TestCasHashMatcher
   )
 
 target_link_libraries(
-  TestHashConverter
-  curand)
+   TestCasHashMatcher
+   curand)
 
-target_link_libraries(
-  TestCasHashMatcher
-  curand)
+
 
 # Activate (and require) C++11 support
 set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD 11)

@@ -1,4 +1,5 @@
 #include "HashConverter.h"
+#include "Share.h"
 
 #include <stdio.h>
 #include <cuda_runtime.h>
@@ -59,15 +60,12 @@ void HashConverter::FillHashingMatrix() {
     curandGenerator_t gen;
 
     curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
-    cudaSetRandomGeneratorSeed(gen, 1); // TODO fillin arbitrary number
-
-    SiftDataPtr base = d_projMatHamming_.elements;
+    curandSetPseudoRandomGeneratorSeed(gen, 1234ULL);
+    
     for(int i = 0; i < d_projMatHamming_.height; i++) {
-        curandGenerateNormal(gen, base, kDimSiftData, 0, 1);
-        base = base + d_projMatHamming_.pitch;
+        curandGenerateNormal(gen, &d_projMatHamming_(i, 0), kDimSiftData, 0, 1);
     }
 
-    dumpDeviceArray(d_projMatHamming_.elements, kDimSiftData);
     //for(int i = 0; i < kCntBucketGroup; i++) {
     //    base = d_projMatBucket_[i].elements;
     //    for(int j = 0; j < d_projMatBucket_[i].height; j++) {
@@ -76,10 +74,8 @@ void HashConverter::FillHashingMatrix() {
     //    }
     //}
 
-    base = d_projMatBucket_.elements;
     for(int i = 0; i < d_projMatBucket_.height; i++) {
-        curandGenerateNormal(gen, base, kDimSiftData, 0, 1);
-        base = base + d_projMatBucket_.pitch;
+        curandGenerateNormal(gen, &d_projMatBucket_(i, 0), kDimSiftData, 0, 1);
     }
 
     CUDA_CHECK_ERROR;

@@ -72,7 +72,9 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
     for(int i = 0; i < kDimSiftData; i++) {
         element = element + s_siftCur[i] * g_projMatCur[i];
     }
+
     uint8_t hashVal = static_cast<uint8_t>(element > 0.f);
+
     hashVal <<= tx % 8;
     s_hashBits[tx] = hashVal;
     __syncthreads();
@@ -89,12 +91,13 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         g_bucketHash(bx, tx / 8) = hashVal;
         BucketElePtr baseAddr = &(g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, 0));
         int currIdx = atomicInc(baseAddr, kMaxMemberPerGroup) + 1;
-
+ 
+#ifdef DEBUG
         printf("%d %d %d\n", tx / 8, hashVal, currIdx); // debug
-
-        if(currIdx == 1) {
-            printf("Warning: bucket member overflow! Consider increasing bucket size #%d %d!\n", tx / 8, hashVal);
+        if(currIdx == kMaxMemberPerGroup) {
+            printf("Warning: bucket full! Consider increasing bucket #%d in group %d!\n", hashVal, tx / 8);
         }
+#endif
 
         g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, currIdx) = bx;
     }
@@ -119,7 +122,7 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
     for(int i = 0; i < d_Image.bucketList.height; i++) {
         cudaMemset(&(d_Image.bucketList(i, 0)),
                    0,
-                   sizeof(BucketEle_t));
+                   d_Image.bucketList.pitch);
         CUDA_CHECK_ERROR;
     }
 

@@ -1,10 +1,13 @@
 #include "KeyFileReader.h"
+#include "Share.h"
 
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <stdlib.h>
+#include <cstring>
 
 KeyFileReader::KeyFileReader() {
+    std::memset(siftAccumulator_, 0, sizeof(siftAccumulator_));
 }
 
 KeyFileReader::~KeyFileReader() {
