@@ -135,3 +135,4 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
     BucketHashKernel<<<gridSize, blockSize>>>(d_Image.siftData, d_projMatBucket_, d_Image.bucketIDList, d_Image.bucketList);
     CUDA_CHECK_ERROR;
 }
+ 
