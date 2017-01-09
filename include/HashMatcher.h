@@ -11,11 +11,11 @@ public:
     HashMatcher();
     ~HashMatcher();
     int NumberOfMatch(int imageIndex1, int imageIndex2);
-    MatchPairPtr MatchPairList(int imageIndex1, int imageIndex2);
-    int AddImage(ImageDevice d_Image); /* return value: image index */
+    MatchPairListPtr MatchPairList(int imageIndex1, int imageIndex2);
+    int AddImage(const ImageDevice &d_Image); /* return value: image index */
     
 private:
     std::vector<ImageDevice> d_imageList_;
     std::vector<MatchPairListPtr> h_matchDatabase;
-    MatchPairPtr GeneratePair(int imageIndex1, int imageIndex2);
+    MatchPairListPtr GeneratePair(int imageIndex1, int imageIndex2);
 };

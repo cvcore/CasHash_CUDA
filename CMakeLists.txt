@@ -18,7 +18,7 @@ endif()
 
 if(cmake_build_type_tolower STREQUAL "debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long")
-  add_definitions(-DDEBUG)
+  #add_definitions(-DDEBUG)
 endif()
 
 find_package(CUDA REQUIRED)
@@ -53,23 +53,24 @@ target_link_libraries(
   TestHashConverter
   curand)
 
-cuda_add_executable(TestCasHashMatcher
-  src/TestCasHashMatcher.cpp
+cuda_add_executable(TestHashMatcher
+  src/TestHashMatcher.cpp
   src/KeyFileReader.cpp
   src/HashConverter.cpp
   src/HashConverter.cu
-  src/CasHashMatcher.cpp
+  src/HashMatcher.cpp
+  src/HashMatcher.cu
   )
 
 target_link_libraries(
-   TestCasHashMatcher
+   TestHashMatcher
    curand)
 
 
 
 # Activate (and require) C++11 support
-set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD 11)
-set_property(TARGET TestKeyFileReader PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET TestKeyFileReader TestHashMatcher PROPERTY CXX_STANDARD 11)
+set_property(TARGET TestKeyFileReader TestHashMatcher PROPERTY CXX_STANDARD_REQUIRED ON)
 
 # For HHLR
 configure_file(job.sh.in job.sh @ONLY)

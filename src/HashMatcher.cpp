@@ -27,7 +27,7 @@ int HashMatcher::AddImage(const ImageDevice &d_image) {
     int currentImages = d_imageList_.size();
 
     for(int imageIndex = 0; imageIndex < currentImages - 1; imageIndex++) {
-        h_matchDatabase.push_back(GeneratePair(imageIndex, currentImage - 1)); // pair with all previous images
+        h_matchDatabase.push_back(GeneratePair(currentImages - 1, imageIndex)); // pair with all previous images
         // TODO pair with user-specified list
     }
 

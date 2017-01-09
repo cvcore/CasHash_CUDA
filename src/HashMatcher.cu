@@ -104,7 +104,7 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
 
 }
 
-MatchPairPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageIndex) {
+MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageIndex) {
     const ImageDevice &queryImage = d_imageList_[queryImageIndex];
     const ImageDevice &targetImage = d_imageList_[targetImageIndex];
 

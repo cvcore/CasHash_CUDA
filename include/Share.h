@@ -39,8 +39,10 @@ typedef uint64_t CompHashData_t;
 typedef uint64_t* CompHashDataPtr; // CompHash code is represented with <uint64_t> type
 typedef unsigned int BucketEle_t;
 typedef unsigned int* BucketElePtr; // index list of points in a specific bucket
+
 typedef std::pair<unsigned int, unsigned int> MatchPair_t;
 typedef std::shared_ptr<MatchPair_t> MatchPairPtr;
+
 typedef std::vector<MatchPair_t> MatchPairList_t;
 typedef std::shared_ptr<MatchPairList_t> MatchPairListPtr;
 
