@@ -84,6 +84,6 @@ void HashConverter::FillHashingMatrix() {
 void HashConverter::CalcHashValues(ImageDevice &d_Image){
 	CompHash(d_Image);
 	BucketHash(d_Image);
-	cudaFree(d_Image.siftData.elements);
+	//cudaFree(d_Image.siftData.elements);
 }
 

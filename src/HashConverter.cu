@@ -28,8 +28,8 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
         __syncthreads();
     }
     if(tx % 64 == 0) {
-        uint64_t halfCompHash = static_cast<uint64_t>(s_hashBits[tx + 32] << 32 + s_hashBits[tx]);
-        g_compHash(bx, tx/64) = halfCompHash;
+        uint64_t halfCompHash = (static_cast<uint64_t>(s_hashBits[tx + 32] << 32) + s_hashBits[tx]);
+        g_compHash(bx, tx / 64) = halfCompHash;
     }
 }
 
@@ -92,8 +92,8 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         BucketElePtr baseAddr = &(g_bucketEle(kCntBucketPerGroup * tx / 8 + hashVal, 0));
         int currIdx = atomicInc(baseAddr, kMaxMemberPerGroup) + 1;
  
-#ifdef DEBUG
-        printf("%d %d %d\n", tx / 8, hashVal, currIdx); // debug
+#ifdef DEBUG_HASH_CONVERTER
+        printf("%d %d %d\n", tx / 8, hashVal, currIdx);
         if(currIdx == kMaxMemberPerGroup) {
             printf("Warning: bucket full! Consider increasing bucket #%d in group %d!\n", hashVal, tx / 8);
         }

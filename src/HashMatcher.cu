@@ -16,43 +16,53 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
     int candidateTop[kCntCandidateTopMax];
     int candidateTopLen = 0;
 
-    int querySiftIndex = threadIdx + blockIdx.x * blockDim.x;
+    int querySiftIndex = threadIdx.x + blockIdx.x * blockDim.x;
 
     if(querySiftIndex >= queryImageCntPoint)
         return;
 
-    for(int dist = 0; dist < kDimHashData + 1; dist++) {
-        candidateLen[dist] = 0;
-    }
+    memset(candidateLen, 0, sizeof(candidateLen));
     
     CompHashData_t currentCompHash[2];
     currentCompHash[0] = g_queryImageCompHashData(querySiftIndex, 0);
     currentCompHash[1] = g_queryImageCompHashData(querySiftIndex, 1);
 
-    for(m = 0; m < kCntBucketGroup; m++) {
+#ifdef DEBUG_HASH_MATCHER1
+    printf("current comphash: %lld %lld\n", currentCompHash[0], currentCompHash[1]);
+#endif
+
+    for(int m = 0; m < kCntBucketGroup; m++) {
 
         HashData_t currentBucket = g_queryImageBucketID(querySiftIndex, m);
         BucketEle_t *targetBucket = &g_targetImageBucket(m * kCntBucketPerGroup + currentBucket, 0);
         int targetBucketElements = targetBucket[0];
 
-        for(idx = 1; idx <= targetBucketElements; idx++) {
+        for(int bucketIndex = 1; bucketIndex <= targetBucketElements; bucketIndex++) {
 
-            int target = targetBucket[idx];
+            int targetIndex = targetBucket[bucketIndex];
 
-            int dist = __popcll(currentCompHash[0] ^ g_targetImageCompHashData(querySiftIndex, 0)) +
-                __popcll(currentCompHash[1] ^ g_targetImageCompHashData(querySiftIndex, 1));
-            candidate[dist][candidateLen[dist]++] = target;
-            candidateUsed[target] = false;
+            int dist = __popcll(currentCompHash[0] ^ g_targetImageCompHashData(targetIndex, 0)) +
+                __popcll(currentCompHash[1] ^ g_targetImageCompHashData(targetIndex, 1));
+            candidate[dist][candidateLen[dist]++] = targetIndex;
+            candidateUsed[targetIndex] = false;
+
+#ifdef DEBUG_HASH_MATCHER2
+            printf("(%d %d) ", targetIndex, dist);
+#endif
         }
     }
 
-    for(int dist = 0; dist < kDimHashData; dist++) {
+    for(int dist = 0; dist <= kDimHashData; dist++) {
         for(int i = 0; i < candidateLen[dist]; i++) {
-            int target = candidate[dist][i];
+            int targetIndex = candidate[dist][i];
 
-            if(!candidateUsed[target]) {
-                candidateUsed[target] = true;
-                candidateTop[candidateTopLen++] = target;
+            //if(blockIdx.x == 0 && threadIdx.x == 0) {
+            //    printf("%d ", targetIndex);
+            //}
+
+            if(!candidateUsed[targetIndex]) {
+                candidateUsed[targetIndex] = true;
+                candidateTop[candidateTopLen++] = targetIndex;
                 if(candidateTopLen == kCntCandidateTopMax)
                     break;
             }
@@ -97,9 +107,9 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
 
 
     if (minVal1 < minVal2 * 0.32) {
-        g_pairResult[querySiftIndex] = minValInd1;
+        g_pairResult[querySiftIndex] = minValInd1 + 1;
     } else {
-        g_pairResult[querySiftIndex] = -1;
+        g_pairResult[querySiftIndex] = 0;
     }
 
 }
@@ -110,6 +120,9 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
 
     BucketElePtr d_pairResult, h_pairResult;
     cudaMalloc(&d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint);
+    CUDA_CHECK_ERROR;
+
+    cudaMemset(d_pairResult, 0, sizeof(BucketEle_t) * queryImage.cntPoint);
     CUDA_CHECK_ERROR;
 
     dim3 blockSize(HASH_MATCHER_BLOCK_SIZE);
@@ -126,6 +139,7 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
 
     h_pairResult = new BucketEle_t[queryImage.cntPoint];
     cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
+    CUDA_CHECK_ERROR;
     cudaFree(d_pairResult);
     CUDA_CHECK_ERROR;
 

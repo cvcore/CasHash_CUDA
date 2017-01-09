@@ -42,3 +42,7 @@ int HashMatcher::NumberOfMatch(int imageIndex1, int imageIndex2) {
 
     return h_matchDatabase[PairListIndex(imageIndex1, imageIndex2)]->size();
 }
+
+MatchPairListPtr HashMatcher::MatchPairList( int imageIndex1, int imageIndex2 ) {
+    return h_matchDatabase[PairListIndex(imageIndex1, imageIndex2)];
+}

@@ -7,6 +7,8 @@
 #include <cuda_runtime.h>
 #include <string>
 #include <vector>
+#include <memory>
+#include <utility>
 
 #ifdef __CUDACC__
 #define CUDA_UNIVERSAL_QUALIFIER __host__ __device__
@@ -19,7 +21,7 @@ const int kDimHashData = 128; // the number of dimensions of Hash code
 const int kBitInCompHash = 64; // the number of Hash code bits to be compressed; in this case, use a <uint64_t> variable to represent 64 bits
 const int kDimCompHashData = kDimHashData / kBitInCompHash; // the number of dimensions of CompHash code
 const int kMinMatchListLen = 16; // the minimal list length for outputing SIFT matching result between two images
-const int kMaxCntPoint = 100000; // the maximal number of possible SIFT points; ensure this value is not exceeded in your application
+const int kMaxCntPoint = 4000; // the maximal number of possible SIFT points; ensure this value is not exceeded in your application
 
 const int kCntBucketBit = 8; // the number of bucket bits
 const int kCntBucketGroup = 6; // the number of bucket groups
@@ -28,7 +30,7 @@ const int kMaxMemberPerGroup = 2000;
 
 const int kCntCandidateTopMin = 6; // the minimal number of top-ranked candidates
 const int kCntCandidateTopMax = 10; // the maximal number of top-ranked candidates
-const int kMaxCandidatePerDist = 1000;
+const int kMaxCandidatePerDist = 200;
 
 typedef float SiftData_t; // CUDA GPUs are optimized for float arithmetics, we use float instead of int
 typedef float* SiftDataPtr;
