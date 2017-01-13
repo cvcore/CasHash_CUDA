@@ -27,9 +27,7 @@ HashConverter::HashConverter() {
                   d_projMatBucket_.height);
   CUDA_CHECK_ERROR;
 
-  FillHashingMatrixExternal("random.txt");
-  //std::srand(1);
-  //FillHashingMatrixCMath();
+  FillHashingMatrixCuRand();
 }
 
 HashConverter::~HashConverter(){ 
