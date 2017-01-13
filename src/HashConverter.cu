@@ -25,7 +25,6 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
         if(tx % stride == 0) {
             s_hashBits[tx] += s_hashBits[tx + stride / 2];
         }
-        //__syncthreads();
     }
 
     if(tx % 64 == 0) {
@@ -84,7 +83,6 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         if(tx % stride == 0) {
             s_hashBits[tx] += s_hashBits[tx + stride / 2];
         }
-        __syncthreads();
     }
 
     if(tx % 8 == 0 && tx / 8 < kCntBucketGroup) {

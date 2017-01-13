@@ -73,8 +73,18 @@ target_link_libraries(
    TestHashMatcher
    curand)
 
+cuda_add_executable(KeyMatchCUDA
+  src/main.cpp
+  src/KeyFileReader.cpp
+  src/HashConverter.cpp
+  src/HashConverter.cu
+  src/HashMatcher.cpp
+  src/HashMatcher.cu
+  )
 
-
+target_link_libraries(
+   KeyMatchCUDA
+   curand)
 
 # For HHLR
 configure_file(job.sh.in job.sh @ONLY)

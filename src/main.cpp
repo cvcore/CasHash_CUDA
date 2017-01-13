@@ -1,28 +1,70 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+
 #include "KeyFileReader.h"
 #include "HashConverter.h"
+#include "HashMatcher.h"
 
 int main(int argc, char **argv) {
-    char path1[256];
-
     if(argc != 3) {
         fprintf(stderr, "Usage: %s <list.txt> outfile\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    FILE *fp = fopen(argv[1], "r");
-    if(fp == NULL) {
-        fprintf(stderr, "Index file %s does not exist!\n", argv[1]);
-        exit(EXIT_FAILURE);
+    KeyFileReader keyFileReader;
+    keyFileReader.OpenKeyList(argv[1]);
+    keyFileReader.ZeroMeanProc();
+
+    std::cerr << "Initializing CUDA device...\n";
+    cudaSetDevice(0);
+
+    HashConverter hashConverter;
+    HashMatcher hashMatcher;
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    FILE *outFile = fopen(argv[2], "w");
+
+    for(int imageIndex = 0; imageIndex < keyFileReader.cntImage; imageIndex++) {
+        ImageDevice newImage;
+
+        cudaEventRecord(start);
+
+        std::cerr << "---------------------\nUploading image #" << imageIndex << " to GPU...\n";
+        keyFileReader.UploadImage(newImage, imageIndex);
+
+        std::cerr << "Calculating compressed Hash Values for image #" << imageIndex << "\n";
+        hashConverter.CalcHashValues(newImage);
+
+        std::cerr << "Matching image #" << imageIndex << " with previous images...\n";
+        hashMatcher.AddImage(newImage);
+
+        for(int imageIndex2 = 0; imageIndex2 < imageIndex; imageIndex2++) {
+            MatchPairListPtr mpList = hashMatcher.MatchPairList(imageIndex, imageIndex2);
+            int pairCount = hashMatcher.NumberOfMatch(imageIndex, imageIndex2);
+
+            fprintf(outFile, "%d %d\n%d\n", imageIndex, imageIndex2, pairCount);
+
+            for(MatchPairList_t::iterator it = mpList->begin(); it != mpList->end(); it++) {
+                fprintf(outFile, "%d %d\n", it->first, it->second);
+            }
+        }
+
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+
+        float timeElapsed;
+        cudaEventElapsedTime(&timeElapsed, start, stop);
+        std::cerr << "Time elapsed: " << timeElapsed << " ms\n";
     }
 
-    KeyFileReader kfr1;
-    ImageDataDevice imgDev;
-    while(fscanf(fp, "%s", path1) > 0) {
-        kfr1.Read(&imgDev, path1);
-    }
-    fclose(fp);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    fclose(outFile);
 
     return 0;
 }
