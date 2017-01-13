@@ -7,8 +7,9 @@
 #include <cuda.h>
 #include <curand.h>
 #include <iostream>
+#include <cmath>
 
-HashConverter::HashConverter(){
+HashConverter::HashConverter() {
 	//Allocate matrix for hashing into 128d-Hamming space
 	d_projMatHamming_.width = kDimSiftData;
 	d_projMatHamming_.height = kDimHashData;
@@ -18,25 +19,6 @@ HashConverter::HashConverter(){
                   d_projMatHamming_.height);
   CUDA_CHECK_ERROR;
 
-  ////Allocate for hashing into 8bit bucket groups
-  //cudaPitchedPtr matBase;
-  //cudaExtent matExt;
-
-  //matExt.width = kDimSiftData * sizeof(SiftData_t);
-  //matExt.height = kCntBucketBit;
-  //matExt.depth = kCntBucketGroup;
-
-  //cudaMalloc3D(&matBase, matExt);
-  //CUDA_CHECK_ERROR;
-
-  //// Map allocated space into each 2D sub-matrix
-  //for(int i = 0; i < kCntBucketGroup; i++) {
-  //    d_projMatBucket_[i].width = matBase.xsize;
-  //    d_projMatBucket_[i].height = matBase.ysize;
-  //    d_projMatBucket_[i].pitch = matBase.pitch;
-  //    d_projMatBucket_[i].elements = reinterpret_cast<SiftDataPtr>(i * matBase.pitch * matBase.ysize + static_cast<char *>(matBase.ptr));
-  //}
-
   d_projMatBucket_.width = kDimSiftData;
 	d_projMatBucket_.height = kDimHashData;
 	cudaMallocPitch(&(d_projMatBucket_.elements),
@@ -45,7 +27,9 @@ HashConverter::HashConverter(){
                   d_projMatBucket_.height);
   CUDA_CHECK_ERROR;
 
-  FillHashingMatrix();
+  FillHashingMatrixExternal("random.txt");
+  //std::srand(1);
+  //FillHashingMatrixCMath();
 }
 
 HashConverter::~HashConverter(){ 
@@ -56,7 +40,7 @@ HashConverter::~HashConverter(){
     CUDA_CHECK_ERROR;
 }
 
-void HashConverter::FillHashingMatrix() {
+void HashConverter::FillHashingMatrixCuRand() {
     curandGenerator_t gen;
 
     curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
@@ -66,19 +50,68 @@ void HashConverter::FillHashingMatrix() {
         curandGenerateNormal(gen, &d_projMatHamming_(i, 0), kDimSiftData, 0, 1);
     }
 
-    //for(int i = 0; i < kCntBucketGroup; i++) {
-    //    base = d_projMatBucket_[i].elements;
-    //    for(int j = 0; j < d_projMatBucket_[i].height; j++) {
-    //        curandGenerateNormal(gen, base, kDimSiftData, 0, 1); // mean:0, stddev:1
-    //        base = base + d_projMatBucket_[i].pitch;
-    //    }
-    //}
-
     for(int i = 0; i < d_projMatBucket_.height; i++) {
         curandGenerateNormal(gen, &d_projMatBucket_(i, 0), kDimSiftData, 0, 1);
     }
 
     CUDA_CHECK_ERROR;
+
+#ifdef DEBUG_HASH_CONVERTER_RANDOM_MATRIX
+    std::cout << "Device random matrix:\n";
+    dumpDeviceArray(&d_projMatBucket_(0, 0), 128);
+#endif
+
+}
+
+void HashConverter::FillHashingMatrixCMath() {
+    SiftDataPtr tempRand = new SiftData_t[kDimSiftData];
+
+    for(int i = 0; i < d_projMatHamming_.height; i++) {
+        for(int j = 0; j < kDimSiftData; j++) {
+            tempRand[j] = GetNormRand();
+        }
+        cudaMemcpy(&d_projMatHamming_(i, 0), tempRand, kDimSiftData * sizeof(SiftData_t), cudaMemcpyHostToDevice);
+    }
+
+    for(int i = 0; i < d_projMatHamming_.height; i++) {
+        for(int j = 0; j < kDimSiftData; j++) {
+            tempRand[j] = GetNormRand();
+        }
+        cudaMemcpy(&d_projMatBucket_(i, 0), tempRand, kDimSiftData * sizeof(SiftData_t), cudaMemcpyHostToDevice);
+    }
+
+#ifdef DEBUG_HASH_CONVERTER_RANDOM_MATRIX
+    std::cout << "Device random matrix:\n";
+    dumpDeviceArray(&d_projMatBucket_(0, 0), 128);
+#endif
+
+}
+
+void HashConverter::FillHashingMatrixExternal(char const *path) {
+    FILE *randomFp = fopen(path, "r");
+    if(!randomFp) {
+        std::cerr << "Random matrix does not exist!\n";
+        exit(-1);
+    }
+
+    SiftDataPtr tempRand = new SiftData_t[kDimSiftData];
+
+    for(int i = 0; i < d_projMatHamming_.height; i++) {
+        for(int j = 0; j < kDimSiftData; j++) {
+            fscanf(randomFp, "%f", &tempRand[j]);
+        }
+        cudaMemcpy(&d_projMatHamming_(i, 0), tempRand, kDimSiftData * sizeof(SiftData_t), cudaMemcpyHostToDevice);
+    }
+
+    for(int i = 0; i < kCntBucketGroup * kCntBucketBit; i++) {
+        for(int j = 0; j < kDimSiftData; j++) {
+            fscanf(randomFp, "%f", &tempRand[j]);
+        }
+        cudaMemcpy(&d_projMatBucket_(i, 0), tempRand, kDimSiftData * sizeof(SiftData_t), cudaMemcpyHostToDevice);
+    }
+
+    delete [] tempRand;
+    fclose(randomFp);
 }
 
 void HashConverter::CalcHashValues(ImageDevice &d_Image){
@@ -87,3 +120,13 @@ void HashConverter::CalcHashValues(ImageDevice &d_Image){
 	//cudaFree(d_Image.siftData.elements);
 }
 
+float HashConverter::GetNormRand(void) {
+    // based on Box-Muller transform; for more details, please refer to the following WIKIPEDIA website:
+    // http://en.wikipedia.org/wiki/Box_Muller_transform
+    float u1 = (rand() % 1000 + 1) / 1000.0;
+    float u2 = (rand() % 1000 + 1) / 1000.0;
+
+    float randVal = sqrt(-2 * log(u1)) * cos(2 * acos(-1.0) * u2);
+
+    return randVal;
+}

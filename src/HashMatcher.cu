@@ -106,7 +106,7 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
     }
 
 
-    if (minVal1 < minVal2 * 0.32) {
+    if (minVal1 < minVal2 * 0.32f) {
         g_pairResult[querySiftIndex] = minValInd1 + 1;
     } else {
         g_pairResult[querySiftIndex] = 0;

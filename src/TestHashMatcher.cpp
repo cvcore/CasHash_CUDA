@@ -36,16 +36,16 @@ int main(int argc, char *argv[]) {
         std::cerr << "Adding image to hashmatcher\n";
         hm.AddImage(curImg);
 
-#ifdef DEBUG_HASH_MATCHER
         for(int j = 0; j < i; j++) {
             std::cerr << hm.NumberOfMatch(i, j) << " match(es) found between image " << i << " and " << j << "\n";
+#ifdef DEBUG_HASH_MATCHER
             MatchPairListPtr mpList = hm.MatchPairList(i, j);
             for(MatchPairList_t::iterator it = mpList->begin(); it != mpList->end(); it++) {
                 std::cerr << "(" << it->first << ", " << it->second << ") ";
             }
             std::cerr << std::endl;
-        }
 #endif
+        }
 
     }
 

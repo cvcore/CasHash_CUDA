@@ -18,14 +18,14 @@ endif()
 
 if(cmake_build_type_tolower STREQUAL "debug")
   list(APPEND CMAKE_CXX_FLAGS "-Wall -Wno-long-long")
-  #add_definitions(-DDEBUG_HASH_CONVERTER)
-  add_definitions(-DDEBUG_HASH_MATCHER)
+  #add_definitions(-DDEBUG_HASH_MATCHER)
+  #add_definitions(-DDEBUG_HASH_CONVERTER2)
 endif()
 
 find_package(CUDA REQUIRED)
 
 # Kepler
-list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_30,code=sm_30")
+#list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_30,code=sm_30")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_35,code=sm_35")
 
 # C++0x support
@@ -36,6 +36,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
+
+include_directories(${PROJECT_SOURCE_DIR}/third_party/cub-1.6.4)
 
 #cuda_add_executable(KeyMatchCUDA
 #  src/main.cpp

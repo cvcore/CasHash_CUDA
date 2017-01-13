@@ -46,12 +46,13 @@ void KeyFileReader::AddKeyFile( const char *path ) {
     }
 
     for(int i = 0; i < cntPoint; i++) {
+        fscanf(keyFile, "%*f%*f%*f%*f"); //ignoring sift headers
         SiftDataPtr rowVector = newImage.siftData.elements + kDimSiftData * i;
         for(int j = 0; j < kDimSiftData; j++) {
             fscanf(keyFile, "%f", &rowVector[j]);
-            siftAccumulator_[j] = siftAccumulator_[j] + static_cast<float>(rowVector[j]);
-            cntTotalVector_++;
+            siftAccumulator_[j] = siftAccumulator_[j] + rowVector[j];
         }
+        cntTotalVector_++;
     }
     fclose(keyFile);
     h_imageList_.push_back(newImage);
@@ -72,14 +73,17 @@ void KeyFileReader::OpenKeyList( const char *path ) {
 }
 
 void KeyFileReader::ZeroMeanProc() {
-    std::vector<ImageHost>::iterator it;
     SiftData_t mean[kDimSiftData];
+
     for(int i = 0; i < kDimSiftData; i++) {
         mean[i] = siftAccumulator_[i] / cntTotalVector_;
     }
+
+    std::vector<ImageHost>::iterator it;
+
     for(it = h_imageList_.begin(); it != h_imageList_.end(); ++it) {
         for(int i = 0; i < it->cntPoint; i++) {
-            SiftDataPtr rowVector = it->siftData.elements + i * kDimSiftData;
+            SiftDataPtr rowVector = &it->siftData(i, 0);
             for(int j = 0; j < kDimSiftData; j++) {
                 rowVector[j] -= mean[j];
             }
@@ -102,6 +106,7 @@ void KeyFileReader::UploadImage( ImageDevice &d_Image, const int index ) {
                  h_imageList_[index].siftData.elements,
                  h_imageList_[index].siftData.pitch,
                  h_imageList_[index].siftData.width * sizeof(SiftData_t),
-                 h_imageList_[index].siftData.height, cudaMemcpyHostToDevice);
+                 h_imageList_[index].siftData.height,
+                 cudaMemcpyHostToDevice);
     CUDA_CHECK_ERROR;
 }

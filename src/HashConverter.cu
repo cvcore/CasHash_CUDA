@@ -17,7 +17,7 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
         element = element + s_siftCur[i] * g_projMatCur[i];
     }
     uint32_t hashVal = static_cast<uint32_t>(element > 0.f);
-    hashVal <<= tx % 32;
+    hashVal <<= (tx % 32);
     s_hashBits[tx] = hashVal;
     __syncthreads();
 
@@ -25,8 +25,9 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
         if(tx % stride == 0) {
             s_hashBits[tx] += s_hashBits[tx + stride / 2];
         }
-        __syncthreads();
+        //__syncthreads();
     }
+
     if(tx % 64 == 0) {
         uint64_t halfCompHash = (static_cast<uint64_t>(s_hashBits[tx + 32] << 32) + s_hashBits[tx]);
         g_compHash(bx, tx / 64) = halfCompHash;
@@ -59,7 +60,7 @@ void HashConverter::CompHash( ImageDevice &d_Image ) {
 
 __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_t> g_projMat, Matrix<HashData_t> g_bucketHash, Matrix<BucketEle_t> g_bucketEle) {
     __shared__  float s_siftCur[kDimSiftData]; // shared sift vector
-    __shared__ uint8_t s_hashBits[kDimHashData];
+    __shared__ int s_hashBits[kDimHashData];
     SiftDataPtr g_siftCur = &g_sift(blockIdx.x, 0);
     SiftDataConstPtr g_projMatCur = &g_projMat(threadIdx.x, 0);
     int tx = threadIdx.x; // hash group
@@ -73,7 +74,7 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
         element = element + s_siftCur[i] * g_projMatCur[i];
     }
 
-    uint8_t hashVal = static_cast<uint8_t>(element > 0.f);
+    int hashVal = static_cast<int>(element > 0.f);
 
     hashVal <<= tx % 8;
     s_hashBits[tx] = hashVal;
@@ -133,6 +134,17 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
     dim3 gridSize(d_Image.cntPoint);
 
     BucketHashKernel<<<gridSize, blockSize>>>(d_Image.siftData, d_projMatBucket_, d_Image.bucketIDList, d_Image.bucketList);
+
+#ifdef DEBUG_HASH_CONVERTER2
+    for(int m = 0; m < kCntBucketGroup; m++) {
+        for(int bucket = 0; bucket < kCntBucketPerGroup; bucket++) {
+            BucketEle_t bucketSize;
+            cudaMemcpy(&bucketSize, &(d_Image.bucketList(m * kCntBucketPerGroup + bucket, 0)), sizeof(BucketEle_t), cudaMemcpyDeviceToHost);
+            std::cout << "Group: " << m << " Bucket: " << bucket << " Size: " << bucketSize << "\n";
+        }
+    }
+#endif
+
     CUDA_CHECK_ERROR;
 }
  

@@ -121,7 +121,7 @@ inline void dumpDeviceArray(T const *d_Array, int count) {
     CUDA_CHECK_ERROR;
     std::cout << "Dumping device array:\n";
     for(int i = 0; i < count; i++) {
-        std::cout << h_Array[i] << ", ";
+        std::cout << +h_Array[i] << ", ";
     }
     std::cout << "[ " << count << " element(s) ]\n";
     delete [] h_Array;
@@ -131,7 +131,7 @@ template <typename T>
 inline void dumpHostArray(T const *h_Array, int count) {
     std::cout << "Dumping host array:\n";
     for(int i = 0; i < count; i++) {
-        std::cout << h_Array[i] << ", ";
+        std::cout << +h_Array[i] << ", ";
     }
     std::cout << "[ " << count << " element(s) ]\n";
 }
