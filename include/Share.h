@@ -135,3 +135,4 @@ inline void dumpHostArray(T const *h_Array, int count) {
     }
     std::cout << "[ " << count << " element(s) ]\n";
 }
+

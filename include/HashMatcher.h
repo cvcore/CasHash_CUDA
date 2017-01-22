@@ -4,8 +4,6 @@
 #include "Share.h"
 #include <vector>
 
-const int HASH_MATCHER_BLOCK_SIZE = 32;
-
 class HashMatcher {
 public:
     HashMatcher();

@@ -2,6 +2,24 @@
 
 #include "cub/cub.cuh"
 
+const BucketEle_t INVALID_CANDIDATE = ~0;
+const int MAX_COMPHASH_DISTANCE = ~(1 << (sizeof(int) * 8 - 1));
+const float MAX_SIFT_DISTANCE = 1.0e38f;
+const int POSSIBLE_CANDIDATES = kCntCandidateTopMin * kCntBucketGroup;
+const int HASH_MATCHER_BLOCK_SIZE = 128;
+const int HASH_MATCHER_ITEMS_PER_THREAD = 4;
+
+struct DistIndexPair {
+    SiftData_t dist;
+    BucketEle_t index;
+};
+
+struct MinDistOp {
+CUDA_UNIVERSAL_QUALIFIER DistIndexPair operator() (const DistIndexPair a, const DistIndexPair b) {
+        return (a.dist <= b.dist) ? a : b;
+    }
+};
+
 __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
                                    Matrix<CompHashData_t> g_queryImageCompHashData,
                                    Matrix<SiftData_t> g_queryImageSiftData,
@@ -116,32 +134,32 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
 }
 
 template <int BLOCK_SIZE, int ITEMS_PER_THREAD>
-__global__ void PossibleCandidatesKernel(Matrix<HashData_t> g_queryImageBucketID,
-                                    Matrix<CompHashData_t> g_queryImageCompHashData,
-                                    const int queryImageCntPoint,
-                                    Matrix<BucketEle_t> g_targetImageBucket,
-                                    Matrix<CompHashData_t> g_targetImageCompHashData,
-                                    Matrix<BucketEle_t> g_topCandidates)
-{
-    const BucketEle_t INVALID_MEMBER = ~0;
-    const int MAX_DISTANCE = ~(1 << (sizeof(int) * 8));
+__global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
+                                       Matrix<CompHashData_t> g_queryImageCompHashData,
+                                       Matrix<SiftData_t> g_queryImageSiftData,
+                                       const int queryImageCntPoint,
+                                       Matrix<BucketEle_t> g_targetImageBucket,
+                                       Matrix<CompHashData_t> g_targetImageCompHashData,
+                                       Matrix<SiftData_t> g_targetImageSiftData,
+                                       BucketElePtr g_pairResult) {
 
     typedef cub::BlockLoad<BucketEle_t, BLOCK_SIZE, ITEMS_PER_THREAD, cub::BLOCK_LOAD_DIRECT> LoadBucketVectorsT;
     typedef cub::BlockRadixSort<int, BLOCK_SIZE, ITEMS_PER_THREAD, BucketEle_t> SortVectorDistT;
+    typedef cub::BlockReduce<DistIndexPair, BLOCK_SIZE> BlockReduceT;
 
     __shared__ union {
         typename LoadBucketVectorsT::TempStorage load;
         typename SortVectorDistT::TempStorage sort;
+        typename BlockReduceT::TempStorage reduce;
     } tempStorage;
 
     /* in case of same candidate numbers being thrown from different bucket */
-    const int lastTopVectorsCnt = kCntBucketGroup * kCntCandidateTopMin;
-    const int lastTopThreadsCnt = lastTopVectorsCnt / ITEMS_PER_THREAD; // FIXME: deal with demainders != 0
-    __shared__ BucketEle_t lastTopVectors[lastTopVectorsCnt];
+    const int lastTopThreadsCnt = POSSIBLE_CANDIDATES / ITEMS_PER_THREAD; // FIXME: deal with demainders != 0
+    __shared__ BucketEle_t s_lastTopVectors[POSSIBLE_CANDIDATES];
 
     /* Initialize lastTops as INVALID */
-    if(threadIdx.x < lastTopsCnt) {
-        lastTopVectors[threadIdx.x] = INVALID_MEMBER;
+    if(threadIdx.x < lastTopThreadsCnt) {
+        s_lastTopVectors[threadIdx.x] = INVALID_CANDIDATE;
     }
 
     BucketEle_t targetVectors[ITEMS_PER_THREAD];
@@ -153,10 +171,10 @@ __global__ void PossibleCandidatesKernel(Matrix<HashData_t> g_queryImageBucketID
     queryCompHash[1] = g_queryImageCompHashData(queryIndex, 1);
      
     for(int group = 0; group < kCntBucketGroup; group++) {
-        BucketElePtr currentBucketPtr = &g_targetImageBucket(g_queryImageBucketID(queryIndex, group));
+        BucketElePtr currentBucketPtr = &g_targetImageBucket(g_queryImageBucketID(queryIndex, group), 0);
         int currentBucketSize = *currentBucketPtr;
 
-        LoadBucketVectorsT(tempStorage.load).Load(currentBucketPtr + 1, targetVectors, currentBucketSize, INVALID_MEMBER);
+        LoadBucketVectorsT(tempStorage.load).Load(currentBucketPtr + 1, targetVectors, currentBucketSize, INVALID_CANDIDATE);
         __syncthreads();
 
         if(threadIdx.x >= blockDim.x - lastTopThreadsCnt) {
@@ -164,7 +182,7 @@ __global__ void PossibleCandidatesKernel(Matrix<HashData_t> g_queryImageBucketID
 
             #pragma unroll
             for(int i = 0; i < ITEMS_PER_THREAD; i++) {
-                targetVectors[i] = lastTopVectors[i + offset];
+                targetVectors[i] = s_lastTopVectors[i + offset];
             }
         }
 
@@ -172,35 +190,67 @@ __global__ void PossibleCandidatesKernel(Matrix<HashData_t> g_queryImageBucketID
         for(int i = 0; i < ITEMS_PER_THREAD; i++) {
             BucketEle_t targetIndex = targetVectors[i];
 
-            if(targetIndex != INVALID_MEMBER) {
+            if(targetIndex != INVALID_CANDIDATE) {
                 targetDists[i] = __popcll(queryCompHash[0] ^ g_targetImageCompHashData(targetIndex, 0)) +
                     __popcll(queryCompHash[1] ^ g_targetImageCompHashData(targetIndex, 1));
             } else {
-                targetDists[i] = MAX_DISTANCE;
+                targetDists[i] = MAX_COMPHASH_DISTANCE;
             }
         }
+
+        SortVectorDistT(tempStorage.sort).Sort(targetDists, targetVectors);
 
         if(threadIdx.x < lastTopThreadsCnt) {
             int offset = threadIdx.x * ITEMS_PER_THREAD;
 
             #pragma unroll
             for(int i = 0; i < ITEMS_PER_THREAD; i++) {
-                lastTopVectors[i + offset] = targetVectors[i];
+                s_lastTopVectors[i + offset] = targetVectors[i];
             }
         }
 
         __syncthreads();
     }
 
-    /* store top candidates in a row */
-    memcpy(&g_topCandidates(queryIndex, 0), lastTopVectors, lastTopVectorsCnt * sizeof(BucketEle_t));
-}
+    DistIndexPair candidate;
+    candidate.dist = MAX_SIFT_DISTANCE;
 
-__global__ TopCandidateKernel(Matrix<SiftData_t> g_queryImageSiftData,
-                              int queryImageCntPoint,
-                              Matrix<SiftData_t> g_targetImageSiftData,
-                              Matrix<BucketEle_t> g_possibleCandidates) {
-    
+    if(threadIdx.x < POSSIBLE_CANDIDATES) {
+        candidate.index = s_lastTopVectors[threadIdx.x];
+
+        if(candidate.index != INVALID_CANDIDATE) {
+            float dist = 0;
+            SiftDataPtr querySiftVector = &g_queryImageSiftData(queryIndex, 0),
+                targetSiftVector = &g_targetImageSiftData(candidate.index, 0);
+
+            for(int i = 0; i < kDimSiftData; i++) {
+                float diff = querySiftVector[i] - targetSiftVector[i];
+                dist += diff * diff;
+            }
+
+            candidate.dist = dist;
+        }
+    }
+
+    DistIndexPair min1, min2;
+    const MinDistOp minDistOp;
+
+    min1 = BlockReduceT(tempStorage.reduce).Reduce(candidate, minDistOp, POSSIBLE_CANDIDATES);
+
+    if(threadIdx.x == 0) {
+        candidate.index = INVALID_CANDIDATE;
+        candidate.dist = MAX_SIFT_DISTANCE;
+    }
+
+    min2 = BlockReduceT(tempStorage.reduce).Reduce(candidate, minDistOp, POSSIBLE_CANDIDATES);
+
+    if(threadIdx.x == 0) {
+        if(min1.dist < min2.dist * 0.32f) {
+            g_pairResult[queryIndex] = min1.index;
+        } else {
+            g_pairResult[queryIndex] = INVALID_CANDIDATE;
+        }
+    }
 }
 
 MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageIndex) {
@@ -214,17 +264,18 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     cudaMemset(d_pairResult, 0, sizeof(BucketEle_t) * queryImage.cntPoint);
     CUDA_CHECK_ERROR;
 
+    dim3 gridSize(queryImage.cntPoint);
     dim3 blockSize(HASH_MATCHER_BLOCK_SIZE);
-    dim3 gridSize(queryImage.cntPoint / HASH_MATCHER_BLOCK_SIZE);
 
-    GeneratePairKernel<<<gridSize, blockSize>>>(queryImage.bucketIDList,
-                                                queryImage.compHashData,
-                                                queryImage.siftData,
-                                                queryImage.cntPoint,
-                                                targetImage.bucketList,
-                                                targetImage.compHashData,
-                                                targetImage.siftData,
-                                                d_pairResult);
+    GeneratePairKernelFast<HASH_MATCHER_BLOCK_SIZE, HASH_MATCHER_ITEMS_PER_THREAD><<<gridSize, blockSize>>>(
+        queryImage.bucketIDList,
+        queryImage.compHashData,
+        queryImage.siftData,
+        queryImage.cntPoint,
+        targetImage.bucketList,
+        targetImage.compHashData,
+        targetImage.siftData,
+        d_pairResult);
 
     h_pairResult = new BucketEle_t[queryImage.cntPoint];
     cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
@@ -235,7 +286,7 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     MatchPairListPtr matchPairList(new MatchPairList_t);
     
     for(int resultIndex = 0; resultIndex < queryImage.cntPoint; resultIndex++) {
-        if(h_pairResult[resultIndex] != 0) {
+        if(h_pairResult[resultIndex] != INVALID_CANDIDATE) {
             matchPairList->push_back(std::make_pair(resultIndex, h_pairResult[resultIndex] - 1));
         }
     }

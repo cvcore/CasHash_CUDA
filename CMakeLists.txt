@@ -37,7 +37,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-include_directories(${PROJECT_SOURCE_DIR}/third_party/cub-1.6.4)
+include_directories(${PROJECT_SOURCE_DIR}/third_party/cub)
 
 #cuda_add_executable(KeyMatchCUDA
 #  src/main.cpp
