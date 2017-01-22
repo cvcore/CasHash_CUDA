@@ -6,7 +6,7 @@ const BucketEle_t INVALID_CANDIDATE = ~0;
 const int MAX_COMPHASH_DISTANCE = ~(1 << (sizeof(int) * 8 - 1));
 const float MAX_SIFT_DISTANCE = 1.0e38f;
 const int POSSIBLE_CANDIDATES = kCntCandidateTopMin * kCntBucketGroup;
-const int HASH_MATCHER_BLOCK_SIZE = 128;
+const int HASH_MATCHER_BLOCK_SIZE = 64;
 const int HASH_MATCHER_ITEMS_PER_THREAD = 4;
 
 struct DistIndexPair {
@@ -133,7 +133,7 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
 
 }
 
-template <int BLOCK_SIZE, int ITEMS_PER_THREAD>
+template <int BLOCK_SIZE = HASH_MATCHER_BLOCK_SIZE, int ITEMS_PER_THREAD = HASH_MATCHER_ITEMS_PER_THREAD>
 __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
                                        Matrix<CompHashData_t> g_queryImageCompHashData,
                                        Matrix<SiftData_t> g_queryImageSiftData,
@@ -158,9 +158,10 @@ __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
     __shared__ BucketEle_t s_lastTopVectors[POSSIBLE_CANDIDATES];
 
     /* Initialize lastTops as INVALID */
-    if(threadIdx.x < lastTopThreadsCnt) {
+    if(threadIdx.x < POSSIBLE_CANDIDATES) {
         s_lastTopVectors[threadIdx.x] = INVALID_CANDIDATE;
     }
+    __syncthreads();
 
     BucketEle_t targetVectors[ITEMS_PER_THREAD];
     int targetDists[ITEMS_PER_THREAD];
@@ -267,7 +268,7 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     dim3 gridSize(queryImage.cntPoint);
     dim3 blockSize(HASH_MATCHER_BLOCK_SIZE);
 
-    GeneratePairKernelFast<HASH_MATCHER_BLOCK_SIZE, HASH_MATCHER_ITEMS_PER_THREAD><<<gridSize, blockSize>>>(
+    GeneratePairKernelFast<<<gridSize, blockSize>>>(
         queryImage.bucketIDList,
         queryImage.compHashData,
         queryImage.siftData,
