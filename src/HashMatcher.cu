@@ -1,5 +1,6 @@
 #include "HashMatcher.h"
-#include "Share.h"
+
+#include "cub/cub.cuh"
 
 __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
                                    Matrix<CompHashData_t> g_queryImageCompHashData,
@@ -112,6 +113,94 @@ __global__ void GeneratePairKernel(Matrix<HashData_t> g_queryImageBucketID,
         g_pairResult[querySiftIndex] = 0;
     }
 
+}
+
+template <int BLOCK_SIZE, int ITEMS_PER_THREAD>
+__global__ void PossibleCandidatesKernel(Matrix<HashData_t> g_queryImageBucketID,
+                                    Matrix<CompHashData_t> g_queryImageCompHashData,
+                                    const int queryImageCntPoint,
+                                    Matrix<BucketEle_t> g_targetImageBucket,
+                                    Matrix<CompHashData_t> g_targetImageCompHashData,
+                                    Matrix<BucketEle_t> g_topCandidates)
+{
+    const BucketEle_t INVALID_MEMBER = ~0;
+    const int MAX_DISTANCE = ~(1 << (sizeof(int) * 8));
+
+    typedef cub::BlockLoad<BucketEle_t, BLOCK_SIZE, ITEMS_PER_THREAD, cub::BLOCK_LOAD_DIRECT> LoadBucketVectorsT;
+    typedef cub::BlockRadixSort<int, BLOCK_SIZE, ITEMS_PER_THREAD, BucketEle_t> SortVectorDistT;
+
+    __shared__ union {
+        typename LoadBucketVectorsT::TempStorage load;
+        typename SortVectorDistT::TempStorage sort;
+    } tempStorage;
+
+    /* in case of same candidate numbers being thrown from different bucket */
+    const int lastTopVectorsCnt = kCntBucketGroup * kCntCandidateTopMin;
+    const int lastTopThreadsCnt = lastTopVectorsCnt / ITEMS_PER_THREAD; // FIXME: deal with demainders != 0
+    __shared__ BucketEle_t lastTopVectors[lastTopVectorsCnt];
+
+    /* Initialize lastTops as INVALID */
+    if(threadIdx.x < lastTopsCnt) {
+        lastTopVectors[threadIdx.x] = INVALID_MEMBER;
+    }
+
+    BucketEle_t targetVectors[ITEMS_PER_THREAD];
+    int targetDists[ITEMS_PER_THREAD];
+
+    int queryIndex = blockIdx.x;
+    CompHashData_t queryCompHash[2];
+    queryCompHash[0] = g_queryImageCompHashData(queryIndex, 0);
+    queryCompHash[1] = g_queryImageCompHashData(queryIndex, 1);
+     
+    for(int group = 0; group < kCntBucketGroup; group++) {
+        BucketElePtr currentBucketPtr = &g_targetImageBucket(g_queryImageBucketID(queryIndex, group));
+        int currentBucketSize = *currentBucketPtr;
+
+        LoadBucketVectorsT(tempStorage.load).Load(currentBucketPtr + 1, targetVectors, currentBucketSize, INVALID_MEMBER);
+        __syncthreads();
+
+        if(threadIdx.x >= blockDim.x - lastTopThreadsCnt) {
+            int offset = (threadIdx.x - (blockDim.x - lastTopThreadsCnt)) * ITEMS_PER_THREAD;
+
+            #pragma unroll
+            for(int i = 0; i < ITEMS_PER_THREAD; i++) {
+                targetVectors[i] = lastTopVectors[i + offset];
+            }
+        }
+
+        #pragma unroll
+        for(int i = 0; i < ITEMS_PER_THREAD; i++) {
+            BucketEle_t targetIndex = targetVectors[i];
+
+            if(targetIndex != INVALID_MEMBER) {
+                targetDists[i] = __popcll(queryCompHash[0] ^ g_targetImageCompHashData(targetIndex, 0)) +
+                    __popcll(queryCompHash[1] ^ g_targetImageCompHashData(targetIndex, 1));
+            } else {
+                targetDists[i] = MAX_DISTANCE;
+            }
+        }
+
+        if(threadIdx.x < lastTopThreadsCnt) {
+            int offset = threadIdx.x * ITEMS_PER_THREAD;
+
+            #pragma unroll
+            for(int i = 0; i < ITEMS_PER_THREAD; i++) {
+                lastTopVectors[i + offset] = targetVectors[i];
+            }
+        }
+
+        __syncthreads();
+    }
+
+    /* store top candidates in a row */
+    memcpy(&g_topCandidates(queryIndex, 0), lastTopVectors, lastTopVectorsCnt * sizeof(BucketEle_t));
+}
+
+__global__ TopCandidateKernel(Matrix<SiftData_t> g_queryImageSiftData,
+                              int queryImageCntPoint,
+                              Matrix<SiftData_t> g_targetImageSiftData,
+                              Matrix<BucketEle_t> g_possibleCandidates) {
+    
 }
 
 MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageIndex) {
