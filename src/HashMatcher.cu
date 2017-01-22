@@ -259,8 +259,7 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     const ImageDevice &targetImage = d_imageList_[targetImageIndex];
 
     BucketElePtr d_pairResult, h_pairResult;
-    BucketElePtr pairResult;
-    cudaMallocHost(&pairResult, sizeof(BucketEle_t) * queryImage.cntPoint);
+    cudaMalloc(&d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint);
     CUDA_CHECK_ERROR;
 
     dim3 gridSize(queryImage.cntPoint);
@@ -274,23 +273,21 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
         targetImage.bucketList,
         targetImage.compHashData,
         targetImage.siftData,
-        pairResult);
+        d_pairResult);
 
-    //h_pairResult = new BucketEle_t[queryImage.cntPoint];
-    //cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
-    //CUDA_CHECK_ERROR;
-    //cudaFree(d_pairResult);
-    //CUDA_CHECK_ERROR;
+    h_pairResult = new BucketEle_t[queryImage.cntPoint];
+    cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
+    CUDA_CHECK_ERROR;
+    cudaFree(d_pairResult);
+    CUDA_CHECK_ERROR;
 
     MatchPairListPtr matchPairList(new MatchPairList_t);
     
     for(int resultIndex = 0; resultIndex < queryImage.cntPoint; resultIndex++) {
-        if(pairResult[resultIndex] != INVALID_CANDIDATE) {
-            matchPairList->push_back(std::make_pair(resultIndex, pairResult[resultIndex]));
+        if(h_pairResult[resultIndex] != INVALID_CANDIDATE) {
+            matchPairList->push_back(std::make_pair(resultIndex, h_pairResult[resultIndex] - 1));
         }
     }
-
-    // cudaFreeHost(pairResult); // FIXME: this will drag slow time
 
     return matchPairList;
 }

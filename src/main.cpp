@@ -28,11 +28,10 @@ int main(int argc, char **argv) {
 
     FILE *outFile = fopen(argv[2], "w");
 
-    cudaEventRecord(start);
-
     for(int imageIndex = 0; imageIndex < keyFileReader.cntImage; imageIndex++) {
         ImageDevice newImage;
 
+        cudaEventRecord(start);
 
         std::cerr << "---------------------\nUploading image #" << imageIndex << " to GPU...\n";
         keyFileReader.UploadImage(newImage, imageIndex);
@@ -54,14 +53,13 @@ int main(int argc, char **argv) {
             }
         }
 
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+
+        float timeElapsed;
+        cudaEventElapsedTime(&timeElapsed, start, stop);
+        std::cerr << "Time elapsed: " << timeElapsed << " ms\n";
     }
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float timeElapsed;
-    cudaEventElapsedTime(&timeElapsed, start, stop);
-    std::cerr << "Time elapsed: " << timeElapsed << " ms\n";
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
