@@ -5,9 +5,9 @@
 const BucketEle_t INVALID_CANDIDATE = ~0;
 const int MAX_COMPHASH_DISTANCE = ~(1 << (sizeof(int) * 8 - 1));
 const float MAX_SIFT_DISTANCE = 1.0e38f;
-const int POSSIBLE_CANDIDATES = kCntCandidateTopMin * kCntBucketGroup;
-const int HASH_MATCHER_BLOCK_SIZE = 64;
-const int HASH_MATCHER_ITEMS_PER_THREAD = 4;
+const int POSSIBLE_CANDIDATES = 8;
+const int HASH_MATCHER_BLOCK_SIZE = 32;
+const int HASH_MATCHER_ITEMS_PER_THREAD = 2;
 
 struct DistIndexPair {
     SiftData_t dist;
@@ -259,10 +259,8 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     const ImageDevice &targetImage = d_imageList_[targetImageIndex];
 
     BucketElePtr d_pairResult, h_pairResult;
-    cudaMalloc(&d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint);
-    CUDA_CHECK_ERROR;
-
-    cudaMemset(d_pairResult, 0, sizeof(BucketEle_t) * queryImage.cntPoint);
+    BucketElePtr pairResult;
+    cudaMallocHost(&pairResult, sizeof(BucketEle_t) * queryImage.cntPoint);
     CUDA_CHECK_ERROR;
 
     dim3 gridSize(queryImage.cntPoint);
@@ -276,21 +274,23 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
         targetImage.bucketList,
         targetImage.compHashData,
         targetImage.siftData,
-        d_pairResult);
+        pairResult);
 
-    h_pairResult = new BucketEle_t[queryImage.cntPoint];
-    cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
-    CUDA_CHECK_ERROR;
-    cudaFree(d_pairResult);
-    CUDA_CHECK_ERROR;
+    //h_pairResult = new BucketEle_t[queryImage.cntPoint];
+    //cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
+    //CUDA_CHECK_ERROR;
+    //cudaFree(d_pairResult);
+    //CUDA_CHECK_ERROR;
 
     MatchPairListPtr matchPairList(new MatchPairList_t);
     
     for(int resultIndex = 0; resultIndex < queryImage.cntPoint; resultIndex++) {
-        if(h_pairResult[resultIndex] != INVALID_CANDIDATE) {
-            matchPairList->push_back(std::make_pair(resultIndex, h_pairResult[resultIndex] - 1));
+        if(pairResult[resultIndex] != INVALID_CANDIDATE) {
+            matchPairList->push_back(std::make_pair(resultIndex, pairResult[resultIndex]));
         }
     }
+
+    // cudaFreeHost(pairResult); // FIXME: this will drag slow time
 
     return matchPairList;
 }
