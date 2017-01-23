@@ -8,6 +8,7 @@
 
 KeyFileReader::KeyFileReader() {
     std::memset(siftAccumulator_, 0, sizeof(siftAccumulator_));
+    keyFileReaderStream_ = 0;
 }
 
 KeyFileReader::~KeyFileReader() {
@@ -109,4 +110,40 @@ void KeyFileReader::UploadImage( ImageDevice &d_Image, const int index ) {
                  h_imageList_[index].siftData.height,
                  cudaMemcpyHostToDevice);
     CUDA_CHECK_ERROR;
+}
+
+cudaEvent_t KeyFileReader::UploadImageAsync( ImageDevice &d_Image, const int index, cudaEvent_t sync ) {
+    if(keyFileReaderStream_ == 0) {
+        cudaStreamCreate(&keyFileReaderStream_);
+    }
+
+    if(sync) {
+        cudaStreamWaitEvent(keyFileReaderStream_, sync, 0);
+    }
+
+    d_Image.cntPoint = h_imageList_[index].cntPoint;
+    d_Image.siftData.width = kDimSiftData;
+    d_Image.siftData.height = h_imageList_[index].cntPoint;
+
+    cudaMallocPitch(&(d_Image.siftData.elements),
+                    &(d_Image.siftData.pitch),
+                    d_Image.siftData.width * sizeof(SiftData_t),
+                    d_Image.siftData.height);
+
+    cudaMemcpy2DAsync(d_Image.siftData.elements,
+                      d_Image.siftData.pitch,
+                      h_imageList_[index].siftData.elements,
+                      h_imageList_[index].siftData.pitch,
+                      h_imageList_[index].siftData.width * sizeof(SiftData_t),
+                      h_imageList_[index].siftData.height,
+                      cudaMemcpyHostToDevice,
+                      keyFileReaderStream_);
+
+    cudaEvent_t finish;
+    cudaEventCreate(&finish);
+    cudaEventRecord(finish, keyFileReaderStream_);
+
+    CUDA_CHECK_ERROR;
+
+    return finish;
 }

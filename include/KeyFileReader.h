@@ -9,6 +9,7 @@ public:
     KeyFileReader();
     ~KeyFileReader();
     void UploadImage(ImageDevice &imgDev, const int index);
+    cudaEvent_t UploadImageAsync(ImageDevice &imgDev, const int index, cudaEvent_t sync = 0);
     void AddKeyFile(const char *path);
     void OpenKeyList(const char *path);
     void ZeroMeanProc();
@@ -19,4 +20,5 @@ public:
 private:
     SiftData_t siftAccumulator_[kDimSiftData];
     int cntTotalVector_;
+    cudaStream_t keyFileReaderStream_;
 };

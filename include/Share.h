@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <map>
 
 #ifdef __CUDACC__
 #define CUDA_UNIVERSAL_QUALIFIER __host__ __device__
@@ -84,6 +85,7 @@ struct ImageDevice {
     Matrix<CompHashData_t> compHashData; // [cntPoint x 2 Matrix]
     Matrix<HashData_t> bucketIDList; // element -> buckets [cntPoint x kCntBucketGroup]
     Matrix<BucketEle_t> bucketList; // bucket -> elements [kCntBucketGroup*kCntBucketPerGroup x kMaxMemberPerGroup]
+    std::map<int, BucketElePtr> targetCandidates;
 };
 
 

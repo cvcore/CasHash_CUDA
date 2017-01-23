@@ -28,7 +28,7 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
     }
 
     if(tx % 64 == 0) {
-        uint64_t halfCompHash = (static_cast<uint64_t>(s_hashBits[tx + 32] << 32) + s_hashBits[tx]);
+        uint64_t halfCompHash = ((static_cast<uint64_t>(s_hashBits[tx + 32]) << 32) + s_hashBits[tx]);
         g_compHash(bx, tx / 64) = halfCompHash;
     }
 }

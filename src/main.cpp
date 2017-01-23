@@ -33,16 +33,22 @@ int main(int argc, char **argv) {
     for(int imageIndex = 0; imageIndex < keyFileReader.cntImage; imageIndex++) {
         ImageDevice newImage;
 
-
         std::cerr << "---------------------\nUploading image #" << imageIndex << " to GPU...\n";
-        keyFileReader.UploadImage(newImage, imageIndex);
+        cudaEvent_t kfFinishEvent = keyFileReader.UploadImageAsync(newImage, imageIndex);
 
-        std::cerr << "Calculating compressed Hash Values for image #" << imageIndex << "\n";
-        cudaEvent_t hcFinishEvent = hashConverter.CalcHashValuesAsync(newImage);
+        std::cerr << "Calculating compressed Hash Values for image #" << imageIndex << "\n"; 
+        cudaEvent_t hcFinishEvent = hashConverter.CalcHashValuesAsync(newImage, kfFinishEvent);
 
         std::cerr << "Matching image #" << imageIndex << " with previous images...\n";
         hashMatcher.AddImageAsync(newImage, hcFinishEvent);
 
+
+    }
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    for(int imageIndex = 0; imageIndex < keyFileReader.cntImage; imageIndex++) {
         for(int imageIndex2 = 0; imageIndex2 < imageIndex; imageIndex2++) {
             MatchPairListPtr mpList = hashMatcher.MatchPairList(imageIndex, imageIndex2);
             int pairCount = hashMatcher.NumberOfMatch(imageIndex, imageIndex2);
@@ -53,11 +59,7 @@ int main(int argc, char **argv) {
                 fprintf(outFile, "%d %d\n", it->first, it->second);
             }
         }
-
     }
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
 
     float timeElapsed;
     cudaEventElapsedTime(&timeElapsed, start, stop);
