@@ -2,7 +2,7 @@
 
 * Description
 
-This project provides a parallel implementation of CasHash algorithm.
+This project provides a library for GPU acclearated SIFT feature matching between images.
 
 *Related Publication*
 
@@ -14,6 +14,7 @@ On HHLR:
 
 #+BEGIN_EXAMPLE
 git clone git@github.com:cvcore/parallel_cashash.git cashash_cuda
+git submodule init
 cd cashash_cuda
 mkdir build && cd build
 cmake ..
@@ -43,10 +44,10 @@ sbatch job.sh
 
 - ✅ SIFT Vector Preprocessing & CPU Storage
   - ✅ Load vectors in all images.
-    - ❓ Stream loading with cuda stream and asynchronious functions.
+    - ✅  Stream loading with cuda stream and asynchronious functions.
     - Device supports concurrent kernel execution & has 2 async engines
   - ✅ Update all SIFT Vectors to become zero mean 
-    - ❓ Stream preprocessing
+    - ❌  Stream preprocessing
     - 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
 - ✅ Hash Calculation
   - ✅ Hash Remapping
@@ -59,4 +60,4 @@ sbatch job.sh
 - ✅ Matching
   - ✅ Use =__device__ int __popcll(unsigned long long int x)= for sorting mapped hash values
   - ✅ Query all vectors according to bucket information stored in previous step
-  - ❓ Check multiple image pairs simultaneously
+  - ❌  Check multiple image pairs simultaneously
