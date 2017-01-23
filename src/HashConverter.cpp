@@ -115,7 +115,25 @@ void HashConverter::FillHashingMatrixExternal(char const *path) {
 void HashConverter::CalcHashValues(ImageDevice &d_Image){
 	CompHash(d_Image);
 	BucketHash(d_Image);
-	//cudaFree(d_Image.siftData.elements);
+}
+
+cudaEvent_t HashConverter::CalcHashValuesAsync(ImageDevice &d_Image, cudaEvent_t sync) {
+    if(hashConverterStream_ == 0) {
+        cudaStreamCreate(&hashConverterStream_);
+    }
+
+    if(sync) {
+        cudaStreamWaitEvent(hashConverterStream_, sync, 0);
+    }
+
+    CompHash(d_Image, hashConverterStream_);
+    BucketHash(d_Image, hashConverterStream_);
+
+    cudaEvent_t finish;
+    cudaEventCreate(&finish);
+    cudaEventRecord(finish, hashConverterStream_);
+
+    return finish;
 }
 
 float HashConverter::GetNormRand(void) {

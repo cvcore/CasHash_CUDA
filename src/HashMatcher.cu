@@ -199,7 +199,7 @@ __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
             }
         }
 
-        SortVectorDistT(tempStorage.sort).Sort(targetDists, targetVectors);
+        SortVectorDistT(tempStorage.sort).Sort(targetDists, targetVectors, 0, 8); // end_bit = 8, maximum possible dist = 128
 
         if(threadIdx.x < lastTopThreadsCnt) {
             int offset = threadIdx.x * ITEMS_PER_THREAD;

@@ -33,7 +33,7 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
     }
 }
 
-void HashConverter::CompHash( ImageDevice &d_Image ) {
+void HashConverter::CompHash( ImageDevice &d_Image, cudaStream_t stream ) {
     // d_Image.compHashData.width = 2;
     // d_Image.compHashData.height = d_Image.cntPoint;
     // cudaMallocPitch(&(d_Image.compHashData.elements),
@@ -51,9 +51,16 @@ void HashConverter::CompHash( ImageDevice &d_Image ) {
     dim3 blockSize(kDimHashData);
     dim3 gridSize(d_Image.cntPoint);
 
-    CompHashKernel<<<gridSize, blockSize>>>(d_Image.siftData,
-                                            d_projMatHamming_,
-                                            d_Image.compHashData);
+    if(stream == 0)
+        CompHashKernel<<<gridSize, blockSize>>>(d_Image.siftData,
+                                                d_projMatHamming_,
+                                                d_Image.compHashData);
+    else {
+        CompHashKernel<<<gridSize, blockSize, 0, stream>>>(d_Image.siftData,
+                                                           d_projMatHamming_,
+                                                           d_Image.compHashData);
+    }
+
     CUDA_CHECK_ERROR;
 }
 
@@ -64,8 +71,12 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
     SiftDataConstPtr g_projMatCur = &g_projMat(threadIdx.x, 0);
     int tx = threadIdx.x; // hash group
     int bx = blockIdx.x; // sift vector index
+    int idx = tx + bx * blockDim.x;
 
     s_siftCur[tx] = g_siftCur[tx]; // we can do this because kDimSiftData == kBitInCompHash, otherwise we need to setup a if condition
+    if(idx < g_bucketEle.height)
+        g_bucketEle(idx, 0) = 0;
+
     __syncthreads();
 
     float element = 0.f;
@@ -102,7 +113,7 @@ __global__ void BucketHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftDat
     }
 }
 
-void HashConverter::BucketHash( ImageDevice &d_Image ) {
+void HashConverter::BucketHash( ImageDevice &d_Image, cudaStream_t stream ) {
     d_Image.bucketIDList.width = kCntBucketGroup;
     d_Image.bucketIDList.height = d_Image.cntPoint;
     cudaMallocPitch(&(d_Image.bucketIDList.elements),
@@ -118,20 +129,27 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
                     d_Image.bucketList.height);
 
 
-    for(int i = 0; i < d_Image.bucketList.height; i++) {
-        cudaMemset(&(d_Image.bucketList(i, 0)),
-                   0,
-                   d_Image.bucketList.pitch);
-        CUDA_CHECK_ERROR;
-    }
+    //for(int i = 0; i < d_Image.bucketList.height; i++) {
+    //    cudaMemset(&(d_Image.bucketList(i, 0)),
+    //               0,
+    //               sizeof(BucketEle_t));
+    //    CUDA_CHECK_ERROR;
+    //}
 
-    CUDA_CHECK_ERROR;
+    //CUDA_CHECK_ERROR;
 
     // TODO bucketEle
     dim3 blockSize(kDimHashData);
     dim3 gridSize(d_Image.cntPoint);
-
-    BucketHashKernel<<<gridSize, blockSize>>>(d_Image.siftData, d_projMatBucket_, d_Image.bucketIDList, d_Image.bucketList);
+    
+    if(stream == 0)
+        BucketHashKernel<<<gridSize, blockSize>>>(d_Image.siftData,
+                                                  d_projMatBucket_,
+                                                  d_Image.bucketIDList,
+                                                  d_Image.bucketList);
+    else {
+        BucketHashKernel<<<gridSize, blockSize, 0, stream>>>(d_Image.siftData, d_projMatBucket_, d_Image.bucketIDList, d_Image.bucketList);
+    }
 
 #ifdef DEBUG_HASH_CONVERTER2
     for(int m = 0; m < kCntBucketGroup; m++) {
@@ -141,8 +159,8 @@ void HashConverter::BucketHash( ImageDevice &d_Image ) {
             std::cout << "Group: " << m << " Bucket: " << bucket << " Size: " << bucketSize << "\n";
         }
     }
+    CUDA_CHECK_ERROR;
 #endif
 
-    CUDA_CHECK_ERROR;
 }
  
