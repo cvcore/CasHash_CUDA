@@ -28,19 +28,20 @@ int main(int argc, char **argv) {
 
     FILE *outFile = fopen(argv[2], "w");
 
+    cudaEventRecord(start);
+
     for(int imageIndex = 0; imageIndex < keyFileReader.cntImage; imageIndex++) {
         ImageDevice newImage;
 
-        cudaEventRecord(start);
 
         std::cerr << "---------------------\nUploading image #" << imageIndex << " to GPU...\n";
         keyFileReader.UploadImage(newImage, imageIndex);
 
         std::cerr << "Calculating compressed Hash Values for image #" << imageIndex << "\n";
-        hashConverter.CalcHashValues(newImage);
+        cudaEvent_t hcFinishEvent = hashConverter.CalcHashValuesAsync(newImage);
 
         std::cerr << "Matching image #" << imageIndex << " with previous images...\n";
-        hashMatcher.AddImage(newImage);
+        hashMatcher.AddImageAsync(newImage, hcFinishEvent);
 
         for(int imageIndex2 = 0; imageIndex2 < imageIndex; imageIndex2++) {
             MatchPairListPtr mpList = hashMatcher.MatchPairList(imageIndex, imageIndex2);
@@ -53,13 +54,14 @@ int main(int argc, char **argv) {
             }
         }
 
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-
-        float timeElapsed;
-        cudaEventElapsedTime(&timeElapsed, start, stop);
-        std::cerr << "Time elapsed: " << timeElapsed << " ms\n";
     }
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float timeElapsed;
+    cudaEventElapsedTime(&timeElapsed, start, stop);
+    std::cerr << "Time elapsed: " << timeElapsed << " ms\n";
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);

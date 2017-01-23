@@ -7,7 +7,7 @@
 #include <iostream>
 
 HashMatcher::HashMatcher() {
-
+    hashMatcherStream_ = 0;
 }
 
 HashMatcher::~HashMatcher() { 
@@ -21,8 +21,27 @@ int PairListIndex(int imageIndex1, int imageIndex2) {
     return imageIndex1 * (imageIndex1 - 1) / 2 + imageIndex2;
 }
 
-int HashMatcher::AddImage(const ImageDevice &d_image) {
-    d_imageList_.push_back(d_image);
+void HashMatcher::AddImage(const ImageDevice &d_Image) {
+    d_imageList_.push_back(d_Image);
+
+    int currentImages = d_imageList_.size();
+
+    for(int imageIndex = 0; imageIndex < currentImages - 1; imageIndex++) {
+        h_matchDatabase.push_back(GeneratePair(currentImages - 1, imageIndex)); // pair with all previous images
+        // TODO pair with user-specified list
+    }
+}
+
+cudaEvent_t HashMatcher::AddImageAsync(const ImageDevice &d_Image, cudaEvent_t sync) {
+    if(hashMatcherStream_ == 0) {
+        cudaStreamCreate(&hashMatcherStream_);
+    }
+
+    if(sync) {
+        cudaStreamWaitEvent(hashMatcherStream_, sync, 0);
+    }
+
+    d_imageList_.push_back(d_Image);
 
     int currentImages = d_imageList_.size();
 
@@ -31,7 +50,11 @@ int HashMatcher::AddImage(const ImageDevice &d_image) {
         // TODO pair with user-specified list
     }
 
-    return d_imageList_.size();
+    cudaEvent_t finish;
+    cudaEventCreate(&finish);
+    cudaEventRecord(finish, hashMatcherStream_);
+
+    return finish;
 }
 
 int HashMatcher::NumberOfMatch(int imageIndex1, int imageIndex2) {

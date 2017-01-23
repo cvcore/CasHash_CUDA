@@ -265,7 +265,10 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
     dim3 gridSize(queryImage.cntPoint);
     dim3 blockSize(HASH_MATCHER_BLOCK_SIZE);
 
-    GeneratePairKernelFast<<<gridSize, blockSize>>>(
+    cudaEvent_t waitFinish;
+    cudaEventCreate(&waitFinish);
+    
+    GeneratePairKernelFast<<<gridSize, blockSize, 0, hashMatcherStream_>>>(
         queryImage.bucketIDList,
         queryImage.compHashData,
         queryImage.siftData,
@@ -274,6 +277,9 @@ MatchPairListPtr HashMatcher::GeneratePair(int queryImageIndex, int targetImageI
         targetImage.compHashData,
         targetImage.siftData,
         d_pairResult);
+
+    cudaEventRecord(waitFinish, hashMatcherStream_);
+    //cudaEventSynchronize(waitFinish);
 
     h_pairResult = new BucketEle_t[queryImage.cntPoint];
     cudaMemcpy(h_pairResult, d_pairResult, sizeof(BucketEle_t) * queryImage.cntPoint, cudaMemcpyDeviceToHost);
