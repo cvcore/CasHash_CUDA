@@ -4,13 +4,13 @@
 
 
 struct DistIndexPair {
-    SiftData_t targetSiftDist;
+    SiftData_t dist;
     BucketEle_t index;
 };
 
 struct MinDistOp {
 CUDA_UNIVERSAL_QUALIFIER DistIndexPair operator() (const DistIndexPair a, const DistIndexPair b) {
-        return (a.targetSiftDist <= b.targetSiftDist) ? a : b;
+        return (a.dist <= b.dist) ? a : b;
     }
 };
 
@@ -192,70 +192,50 @@ __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
     SortVectorDistT(tempStorage.sort).SortBlockedToStriped(targetDists, targetVectors, 0, 8); // maximum targetSiftDist possible = 128 -> end_bit = 8
     __syncthreads();
 
-    //for(int group = 0; group < kCntBucketGroup; group++) {
-    //    BucketElePtr currentBucketPtr = &g_targetImageBucket(g_queryImageBucketID(queryIndex, group), 0);
-    //    int currentBucketSize = *currentBucketPtr;
+    __shared__ BucketEle_t topCandidates[BLOCK_SIZE];
+    topCandidates[threadIdx.x] = targetVectors[0];
 
-    //    LoadBucketVectorsT(tempStorage.load).Load(currentBucketPtr + 1, targetVectors, currentBucketSize, INVALID_CANDIDATE);
-    //    __syncthreads();
+    __syncthreads();
 
-    //    if(threadIdx.x >= blockDim.x - lastTopThreadsCnt) {
-    //        int offset = (threadIdx.x - (blockDim.x - lastTopThreadsCnt)) * ITEMS_PER_THREAD;
+    DistIndexPair candidate;
+    candidate.dist = MAX_SIFT_DISTANCE;
 
-    //        #pragma unroll
-    //        for(int i = 0; i < ITEMS_PER_THREAD; i++) {
-    //            targetVectors[i] = s_lastTopVectors[i + offset];
-    //        }
-    //    }
+    if(threadIdx.x < POSSIBLE_CANDIDATES) {
+        candidate.index = topCandidates[threadIdx.x];
 
-    //    #pragma unroll
-    //    for(int i = 0; i < ITEMS_PER_THREAD; i++) {
-    //        BucketEle_t targetIndex = targetVectors[i];
+        if(candidate.index != INVALID_CANDIDATE) {
+            float dist = 0;
+            SiftDataPtr querySiftVector = &g_queryImageSiftData(queryIndex, 0),
+                targetSiftVector = &g_targetImageSiftData(candidate.index, 0);
 
-    //        if(targetIndex != INVALID_CANDIDATE) {
-    //            targetDists[i] = __popcll(queryCompHash[0] ^ g_targetImageCompHashData(targetIndex, 0)) +
-    //                __popcll(queryCompHash[1] ^ g_targetImageCompHashData(targetIndex, 1));
-    //        } else {
-    //            targetDists[i] = MAX_COMPHASH_DISTANCE;
-    //        }
-    //    }
+            for(int i = 0; i < kDimSiftData; i++) {
+                float diff = querySiftVector[i] - targetSiftVector[i];
+                dist += diff * diff;
+            }
 
-    //    SortVectorDistT(tempStorage.sort).Sort(targetDists, targetVectors, 0, 8); // end_bit = 8, maximum possible targetSiftDist = 128
-
-    //    if(threadIdx.x < lastTopThreadsCnt) {
-    //        int offset = threadIdx.x * ITEMS_PER_THREAD;
-
-    //        #pragma unroll
-    //        for(int i = 0; i < ITEMS_PER_THREAD; i++) {
-    //            s_lastTopVectors[i + offset] = targetVectors[i];
-    //        }
-    //    }
-
-    //    __syncthreads();
-    //}
-
-    float targetSiftDist = MAX_SIFT_DISTANCE;
-
-    if(targetVectors[0] != INVALID_CANDIDATE) {
-        targetSiftDist = 0;
-        SiftDataPtr querySiftVector = &g_queryImageSiftData(queryIndex, 0),
-            targetSiftVector = &g_targetImageSiftData(targetVectors[0], 0);
-
-        for(int i = 0; i < kDimSiftData; i++) {
-            float diff = querySiftVector[i] - targetSiftVector[i];
-            targetSiftDist += diff * diff;
+            candidate.dist = dist;
         }
     }
 
-    //SortVectorSiftDistT(tempStorage.sortSift).Sort(targetSiftDist, *reinterpret_cast<int (*)[1]>(targetVectors));
+    DistIndexPair min1, min2;
+    const MinDistOp minDistOp;
 
-    //if(threadIdx.x == 0) {
-    //    if(min1.targetSiftDist < min2.targetSiftDist * 0.32f) {
-    //        g_pairResult[queryIndex] = min1.index;
-    //    } else {
-    //        g_pairResult[queryIndex] = INVALID_CANDIDATE;
-    //    }
-    //}
+    min1 = BlockReduceT(tempStorage.reduce).Reduce(candidate, minDistOp, POSSIBLE_CANDIDATES);
+
+    if(threadIdx.x == 0) {
+        candidate.index = INVALID_CANDIDATE;
+        candidate.dist = MAX_SIFT_DISTANCE;
+    }
+
+    min2 = BlockReduceT(tempStorage.reduce).Reduce(candidate, minDistOp, POSSIBLE_CANDIDATES);
+
+    if(threadIdx.x == 0) {
+        if(min1.dist < min2.dist * 0.32f) {
+            g_pairResult[queryIndex] = min1.index;
+        } else {
+            g_pairResult[queryIndex] = INVALID_CANDIDATE;
+        }
+    }
 }
 
 cudaEvent_t HashMatcher::GeneratePair(int queryImageIndex, int targetImageIndex) {
