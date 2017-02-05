@@ -10,7 +10,7 @@ struct DistIndexPair {
 
 struct MinDistOp {
 CUDA_UNIVERSAL_QUALIFIER DistIndexPair operator() (const DistIndexPair a, const DistIndexPair b) {
-        return (a.dist <= b.dist) ? a : b;
+        return (a.dist < b.dist) ? a : b;
     }
 };
 
@@ -149,10 +149,10 @@ __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
 
     /* in case of same candidate numbers being thrown from different bucket */
     const int lastTopThreadsCnt = POSSIBLE_CANDIDATES / ITEMS_PER_THREAD; // FIXME: deal with demainders != 0
-    __shared__ BucketEle_t s_lastTopVectors[POSSIBLE_CANDIDATES];
+    __shared__ BucketEle_t s_lastTopVectors[POSSIBLE_CANDIDATES + 1];
 
     /* Initialize lastTops as INVALID */
-    if(threadIdx.x < POSSIBLE_CANDIDATES) {
+    if(threadIdx.x < POSSIBLE_CANDIDATES + 1) {
         s_lastTopVectors[threadIdx.x] = INVALID_CANDIDATE;
     }
     __syncthreads();
@@ -202,6 +202,21 @@ __global__ void GeneratePairKernelFast(Matrix<HashData_t> g_queryImageBucketID,
             for(int i = 0; i < ITEMS_PER_THREAD; i++) {
                 s_lastTopVectors[i + offset] = targetVectors[i];
             }
+        }
+
+        __syncthreads();
+
+        /* remove duplicated candidate. prerequisite: POSSIBLE_CANDIDATES < blockDim.x */
+        bool isDuplicate = false;
+
+        if(threadIdx.x < POSSIBLE_CANDIDATES && (s_lastTopVectors[threadIdx.x] == s_lastTopVectors[threadIdx.x + 1])){
+            isDuplicate = true;
+        }
+
+        __syncthreads();
+
+        if(isDuplicate) {
+            s_lastTopVectors[threadIdx.x] = INVALID_CANDIDATE;
         }
 
         __syncthreads();
