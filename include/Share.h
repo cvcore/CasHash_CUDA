@@ -27,11 +27,11 @@ const int kMaxCntPoint = 4000; // the maximal number of possible SIFT points; en
 const int kCntBucketBit = 8; // the number of bucket bits
 const int kCntBucketGroup = 6; // the number of bucket groups
 const int kCntBucketPerGroup = 1 << kCntBucketBit; // the number of buckets in each group
-const int kMaxMemberPerGroup = 2000;
+const int kMaxMemberPerGroup = 100;
 
 const int kCntCandidateTopMin = 6; // the minimal number of top-ranked candidates
 const int kCntCandidateTopMax = 10; // the maximal number of top-ranked candidates
-const int kMaxCandidatePerDist = 200;
+const int kMaxCandidatePerDist = 100;
 
 typedef float SiftData_t; // CUDA GPUs are optimized for float arithmetics, we use float instead of int
 typedef float* SiftDataPtr;
