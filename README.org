@@ -32,13 +32,16 @@ Sole command:
 ./KeyMatchCUDA <list.txt> <outfile>
 #+END_EXAMPLE
 
-On HHLR:
+On Lichtweise Cluster:
 
-Extract keyfiles into cashash_cuda/test/keys, then in build folder, run:
+Extract dataset file into cashash_cuda/dataset, then in build folder, run:
 #+BEGIN_EXAMPLE
 sbatch job.sh
 #+END_EXAMPLE
 
+You can download the dataset here:
+
+https://www.dropbox.com/s/ur6l6oigyxfzgrp/cashash_cuda_dataset.zip?dl=0
 
 * Todo
 
