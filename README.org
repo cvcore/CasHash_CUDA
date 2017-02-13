@@ -10,10 +10,9 @@ Cheng Jian, Cong Leng, Jiaxiang Wu, Hainan Cui, and Hanqing Lu. "Fast and accura
 
 * Installation
 
-On HHLR:
 
 #+BEGIN_EXAMPLE
-git clone git@github.com:cvcore/parallel_cashash.git cashash_cuda
+git clone git@github.com:cvcore/cashash_cuda.git cashash_cuda
 git submodule init
 cd cashash_cuda
 mkdir build && cd build
