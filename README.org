@@ -10,10 +10,9 @@ Cheng Jian, Cong Leng, Jiaxiang Wu, Hainan Cui, and Hanqing Lu. "Fast and accura
 
 * Installation
 
-On HHLR:
 
 #+BEGIN_EXAMPLE
-git clone git@github.com:cvcore/parallel_cashash.git cashash_cuda
+git clone git@github.com:cvcore/cashash_cuda.git cashash_cuda
 git submodule init
 cd cashash_cuda
 mkdir build && cd build
@@ -50,7 +49,7 @@ https://www.dropbox.com/s/ur6l6oigyxfzgrp/cashash_cuda_dataset.zip?dl=0
     - ✅  Stream loading with cuda stream and asynchronious functions.
     - Device supports concurrent kernel execution & has 2 async engines
   - ✅ Update all SIFT Vectors to become zero mean 
-    - ❌  Stream preprocessing
+    - Stream preprocessing
     - 1000 images * 2000 sift vectors * 128 dim * 4 byte = 976MiB (We have two GPUs of 5GiB global memory in cluster)
 - ✅ Hash Calculation
   - ✅ Hash Remapping
