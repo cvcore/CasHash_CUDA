@@ -3,7 +3,7 @@
 
 __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_t> g_projMat, Matrix<CompHashData_t> g_compHash) {
     __shared__  float s_siftCur[kDimSiftData]; // shared sift vector
-    __shared__ uint32_t s_hashBits[kDimHashData];
+    __shared__ uint32_t s_hashBits[kDimHashData + 16];
     SiftDataPtr g_siftCur = &g_sift(blockIdx.x, 0);
     SiftDataConstPtr g_projMatCur = &g_projMat(threadIdx.x, 0);
     int tx = threadIdx.x;
@@ -16,16 +16,30 @@ __global__ void CompHashKernel(Matrix<SiftData_t> g_sift, const Matrix<SiftData_
     for(int i = 0; i < kDimSiftData; i++) {
         element = element + s_siftCur[i] * g_projMatCur[i];
     }
+
+    if(tx < 16) {
+        s_hashBits[kDimHashData + tx] = 0;
+    }
+
     uint32_t hashVal = static_cast<uint32_t>(element > 0.f);
     hashVal <<= (tx % 32);
     s_hashBits[tx] = hashVal;
     __syncthreads();
 
-    for(int stride = 2; stride <= 32; stride <<= 1) {
-        if(tx % stride == 0) {
-            s_hashBits[tx] += s_hashBits[tx + stride / 2];
-        }
-    }
+    //for(int stride = 2; stride <= 32; stride <<= 1) {
+    //    if(tx % stride == 0) {
+    //        s_hashBits[tx] += s_hashBits[tx + stride / 2];
+    //    }
+    //}
+
+    /* dangerous reduction but no warp divergence, assuming warp size = 32 */
+    s_hashBits[tx] ^= s_hashBits[tx + 1];
+    s_hashBits[tx] ^= s_hashBits[tx + 2];
+    s_hashBits[tx] ^= s_hashBits[tx + 4];
+    s_hashBits[tx] ^= s_hashBits[tx + 8];
+    s_hashBits[tx] ^= s_hashBits[tx + 16];
+
+    __syncthreads();
 
     if(tx % 64 == 0) {
         uint64_t halfCompHash = ((static_cast<uint64_t>(s_hashBits[tx + 32]) << 32) + s_hashBits[tx]);
