@@ -4,6 +4,14 @@
 
 This project provides a library for GPU acclearated SIFT feature matching between images.
 
+*How fast is it?*
+
+According to our benchmark on Tesla K20 GPU, this algorithm can reach 30 fps pairing 30 images each with ~2000 sift vectors at a time.
+
+*What for?*
+
+This program can be used as a frontend for online image matching as well as large scale 3D reconstruction.
+
 *Related Publication*
 
 Cheng Jian, Cong Leng, Jiaxiang Wu, Hainan Cui, and Hanqing Lu. "Fast and accurate image matching with cascade hashing for 3d reconstruction." In IEEE Conference on Computer Vision and Pattern Recognition (CVPR2014), pp. 1-8. 2014.
