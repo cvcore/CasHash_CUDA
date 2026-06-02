@@ -50,6 +50,10 @@ You can download the dataset here:
 
 https://www.dropbox.com/s/ur6l6oigyxfzgrp/cashash_cuda_dataset.zip?dl=0
 
+* License
+
+This project is licensed under the GNU General Public License v3.0. See [[file:LICENSE.txt][LICENSE.txt]].
+
 * Todo
 
 - ✅ SIFT Vector Preprocessing & CPU Storage
